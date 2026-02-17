@@ -1,0 +1,519 @@
+// src/services/bookService.ts
+import type { Types } from 'mongoose';
+import type { Express } from 'express';
+import Book from '../models/Book';
+import Category, { CategoryModel } from '../models/Category';
+import { AppError } from '../utils/AppError';
+import { toHalalas } from '../utils/money';
+import { slugFromLocalized, makeUniqueSlug } from '../utils/slug';
+import { moveDiskFileToUploads, deleteLocalByRelPath } from './localFiles.disk';
+
+type ObjectId = Types.ObjectId | string;
+type SortDir = 1 | -1;
+
+type CreateBookInput = {
+  title: { ar?: string; en?: string };
+  description?: { ar?: string; en?: string };
+  author: { ar?: string; en?: string };
+  publisher?: { ar?: string; en?: string };
+  language?: 'ar' | 'en';
+  image?: string;
+
+  price: number;
+  salesPrice?: number;
+
+  isDigital?: boolean;
+  pdfUrl?: string;
+  stock?: number;
+
+  categories?: string[];
+  showInHomepage?: boolean;
+
+  pages?: number;
+  publishDate?: Date;
+  isbn?: string;
+};
+
+type UpdateBookInput = Partial<CreateBookInput>;
+
+type ListBooksInput = {
+  page?: number;
+  limit?: number;
+  includeDeleted?: boolean;
+  search?: string;
+  categories?: string; // CSV
+  language?: 'ar' | 'en';
+  isDigital?: boolean;
+  inStock?: boolean;
+  showInHomepage?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+};
+
+/* ------------ Helpers ------------ */
+function parseSort(sortStr?: string): Record<string, SortDir> {
+  const out: Record<string, SortDir> = {};
+  const s = (sortStr || '').trim();
+  if (!s) return { createdAt: -1 };
+  for (const part of s.split(',')) {
+    const [field, dir] = part.split(':').map((x) => x.trim());
+    if (!field) continue;
+    out[field] = dir?.toLowerCase() === 'asc' ? 1 : -1;
+  }
+  return out;
+}
+
+function parseCategoriesCSV(csv?: string): string[] | undefined {
+  if (!csv) return undefined;
+  return csv
+    .split(',')
+    .map((x) => x.trim())
+    .filter((x) => x.length === 24);
+}
+
+async function incBooksCount(catIds: ObjectId[] | undefined, delta: 1 | -1) {
+  if (!catIds || !catIds.length) return;
+  const Cat = Category as unknown as CategoryModel;
+  await Promise.all(catIds.map((id) => Cat.incCount(String(id), 'book', delta)));
+}
+
+function buildBooksQuery(input: {
+  includeDeleted?: boolean;
+  language?: 'ar' | 'en';
+  isDigital?: boolean;
+  inStock?: boolean;
+  showInHomepage?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  categories?: string;
+  search?: string;
+}) {
+  const base: any = {};
+  const and: any[] = [];
+
+  if (!input.includeDeleted) base.isDeleted = false;
+
+  if (input.language) base.language = input.language;
+  if (typeof input.isDigital === 'boolean') base.isDigital = input.isDigital;
+  if (typeof input.showInHomepage === 'boolean') base.showInHomepage = input.showInHomepage;
+
+  if (typeof input.minPrice === 'number' || typeof input.maxPrice === 'number') {
+    const p: any = {};
+    if (typeof input.minPrice === 'number') p.$gte = toHalalas(input.minPrice);
+    if (typeof input.maxPrice === 'number') p.$lte = toHalalas(input.maxPrice);
+    base.priceHalallas = p;
+  }
+
+  const categoryIds = parseCategoriesCSV(input.categories);
+  if (categoryIds?.length) base.categories = { $in: categoryIds };
+
+  if (input.inStock === true) {
+    and.push({ $or: [{ isDigital: true }, { isDigital: false, stock: { $gt: 0 } }] });
+  }
+
+  if (input.search) {
+    const safe = input.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const r = new RegExp(safe, 'i');
+    and.push({
+      $or: [
+        { 'title.ar': r },
+        { 'title.en': r },
+        { 'author.ar': r },
+        { 'author.en': r },
+        { 'description.ar': r },
+        { 'description.en': r },
+        { slug: r },
+        { isbn: r },
+      ],
+    });
+  }
+
+  return and.length ? { ...base, $and: and } : base;
+}
+
+/* ------------ Core Services (روابط فقط) ------------ */
+export async function createBook(data: CreateBookInput) {
+  const desired = slugFromLocalized(data.title);
+  const slug = await makeUniqueSlug(Book, desired);
+
+  const priceHalallas = toHalalas(data.price);
+  const salesPriceHalallas =
+    typeof data.salesPrice === 'number' ? toHalalas(data.salesPrice) : null;
+
+  if (salesPriceHalallas != null && salesPriceHalallas > priceHalallas) {
+    throw AppError.badRequest('سعر التخفيض يجب أن يكون أقل من أو يساوي السعر');
+  }
+
+  const isDigital = data.isDigital ?? true;
+  const pdfUrl = isDigital ? data.pdfUrl : undefined;
+  const stock = isDigital ? null : typeof data.stock === 'number' ? data.stock : 0;
+
+  const doc = await Book.create({
+    title: data.title,
+    description: data.description,
+    author: data.author,
+    publisher: data.publisher,
+    language: data.language ?? 'ar',
+    image: data.image,
+
+    priceHalallas,
+    salesPriceHalallas,
+
+    isDigital,
+    pdfUrl,
+    stock,
+
+    categories: data.categories ?? [],
+    showInHomepage: data.showInHomepage ?? false,
+
+    pages: data.pages,
+    publishDate: data.publishDate,
+    isbn: data.isbn,
+
+    slug,
+  });
+
+  await incBooksCount(doc.categories as ObjectId[], +1);
+  return doc.toJSON();
+}
+
+/** إنشاء كتاب (بدعم ملفات Multer: pdf, cover) */
+export async function createBookWithUploads(
+  data: CreateBookInput,
+  files: { cover?: Express.Multer.File; pdf?: Express.Multer.File },
+) {
+  const desired = slugFromLocalized(data.title);
+  const slug = await makeUniqueSlug(Book, desired);
+
+  const priceHalallas = toHalalas(data.price);
+  const salesPriceHalallas =
+    typeof data.salesPrice === 'number' ? toHalalas(data.salesPrice) : null;
+  if (salesPriceHalallas != null && salesPriceHalallas > priceHalallas) {
+    throw AppError.badRequest('سعر التخفيض يجب أن يكون أقل من أو يساوي السعر');
+  }
+
+  // cover (اختياري)
+  let image: string | undefined;
+  let imageRelPath: string | undefined;
+  if (files.cover) {
+    const saved = await moveDiskFileToUploads(files.cover, 'images/books');
+    image = saved.url;
+    imageRelPath = saved.relPath;
+  } else if (data.image) {
+    image = data.image; // URL خارجي لو تحب
+  }
+
+  // pdf (للرقمي)
+  const isDigital = data.isDigital ?? true;
+  let pdfUrl: string | undefined;
+  let pdfRelPath: string | undefined;
+  if (isDigital) {
+    if (files.pdf) {
+      const saved = await moveDiskFileToUploads(files.pdf, 'files/books');
+      pdfUrl = saved.url;
+      pdfRelPath = saved.relPath;
+    } else if (data.pdfUrl) {
+      pdfUrl = data.pdfUrl; // URL خارجي
+    } else {
+      throw AppError.badRequest('ملف PDF أو رابط PDF مطلوب للكتاب الرقمي');
+    }
+  }
+
+  const stock = isDigital ? null : typeof data.stock === 'number' ? data.stock : 0;
+
+  const doc = await Book.create({
+    title: data.title,
+    description: data.description,
+    author: data.author,
+    publisher: data.publisher,
+    language: data.language ?? 'ar',
+
+    image,
+    imageRelPath,
+
+    priceHalallas,
+    salesPriceHalallas,
+
+    isDigital,
+    pdfUrl,
+    pdfRelPath,
+    stock,
+
+    categories: data.categories ?? [],
+    showInHomepage: data.showInHomepage ?? false,
+
+    pages: data.pages,
+    publishDate: data.publishDate,
+    isbn: data.isbn,
+
+    slug,
+  });
+
+  await incBooksCount(doc.categories as ObjectId[], +1);
+  return doc.toJSON();
+}
+
+/** قائمة الكتب */
+export async function listBooks(input: ListBooksInput) {
+  const page = Math.max(1, input.page || 1);
+  const limit = Math.min(100, Math.max(1, input.limit || 10));
+  const skip = (page - 1) * limit;
+
+  const q = buildBooksQuery(input);
+  const sort = parseSort(input.sort);
+
+  const [items, total] = await Promise.all([
+    Book.find(q).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }),
+    Book.countDocuments(q),
+  ]);
+
+  const pages = Math.max(1, Math.ceil(total / limit));
+  return {
+    items,
+    meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
+  };
+}
+
+/** جلب كتاب */
+export async function getBook(id: string) {
+  const doc = await Book.findById(id).lean({ virtuals: true });
+  if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
+  return doc;
+}
+
+/** تحديث كتاب (روابط فقط) */
+export async function updateBook(id: string, data: UpdateBookInput) {
+  const doc = await Book.findById(id);
+  if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
+
+  if (data.title) {
+    const desired = slugFromLocalized(data.title);
+    doc.slug = await makeUniqueSlug(Book, desired, {
+      excludeId: String(doc._id),
+      filter: { isDeleted: false },
+    });
+    doc.title = data.title;
+  }
+
+  if (typeof data.description !== 'undefined') doc.description = data.description;
+  if (typeof data.author !== 'undefined') doc.author = data.author;
+  if (typeof data.publisher !== 'undefined') doc.publisher = data.publisher;
+  if (typeof data.language !== 'undefined') doc.language = data.language;
+  if (typeof data.image !== 'undefined') doc.image = data.image;
+  if (typeof data.showInHomepage === 'boolean') doc.showInHomepage = data.showInHomepage;
+  if (typeof data.pages === 'number') doc.pages = data.pages;
+  if (typeof data.publishDate !== 'undefined') doc.publishDate = data.publishDate;
+  if (typeof data.isbn !== 'undefined') doc.isbn = data.isbn;
+
+  if (typeof data.price === 'number') doc.priceHalallas = toHalalas(data.price);
+  if (typeof data.salesPrice === 'number') doc.salesPriceHalallas = toHalalas(data.salesPrice);
+  else if (data.salesPrice === null) doc.salesPriceHalallas = null;
+  if (typeof doc.salesPriceHalallas === 'number' && doc.salesPriceHalallas > doc.priceHalallas) {
+    throw AppError.badRequest('سعر التخفيض يجب أن يكون أقل من أو يساوي السعر');
+  }
+
+  if (typeof data.isDigital === 'boolean') {
+    doc.isDigital = data.isDigital;
+  }
+
+  if (doc.isDigital) {
+    if (typeof data.pdfUrl === 'string') {
+      if (doc.pdfRelPath) {
+        await deleteLocalByRelPath(doc.pdfRelPath);
+      }
+      doc.pdfUrl = data.pdfUrl;
+      doc.pdfRelPath = undefined;
+    }
+    if (!doc.pdfUrl) throw AppError.badRequest('رابط PDF مطلوب للكتاب الرقمي');
+    doc.stock = null;
+  } else {
+    if (typeof data.stock === 'number') doc.stock = data.stock;
+    if (typeof doc.stock !== 'number') doc.stock = 0;
+    // اختياري: تنظيف pdf عند التحويل لورقي (لو حابب)
+  }
+
+  if (Array.isArray(data.categories)) {
+    const before = (doc.categories || []).map((x) => String(x));
+    const after = data.categories;
+    const removed = before.filter((id) => !after.includes(id));
+    const added = after.filter((id) => !before.includes(id));
+    doc.categories = after as any;
+    await Promise.all([incBooksCount(added, +1), incBooksCount(removed, -1)]);
+  }
+
+  await doc.save();
+  return doc.toJSON();
+}
+
+/** تحديث كتاب (بدعم ملفات) */
+export async function updateBookWithUploads(
+  id: string,
+  data: UpdateBookInput,
+  files: { cover?: Express.Multer.File; pdf?: Express.Multer.File },
+) {
+  const doc = await Book.findById(id);
+  if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
+
+  if (data.title) {
+    const desired = slugFromLocalized(data.title);
+    doc.slug = await makeUniqueSlug(Book, desired, {
+      excludeId: String(doc._id),
+      filter: { isDeleted: false },
+    });
+    doc.title = data.title;
+  }
+
+  if (typeof data.description !== 'undefined') doc.description = data.description;
+  if (typeof data.author !== 'undefined') doc.author = data.author;
+  if (typeof data.publisher !== 'undefined') doc.publisher = data.publisher;
+  if (typeof data.language !== 'undefined') doc.language = data.language;
+  if (typeof data.showInHomepage === 'boolean') doc.showInHomepage = data.showInHomepage;
+  if (typeof data.pages === 'number') doc.pages = data.pages;
+  if (typeof data.publishDate !== 'undefined') doc.publishDate = data.publishDate;
+  if (typeof data.isbn !== 'undefined') doc.isbn = data.isbn;
+
+  // الأسعار
+  if (typeof data.price === 'number') doc.priceHalallas = toHalalas(data.price);
+  if (typeof data.salesPrice === 'number') doc.salesPriceHalallas = toHalalas(data.salesPrice);
+  else if (data.salesPrice === null) doc.salesPriceHalallas = null;
+  if (typeof doc.salesPriceHalallas === 'number' && doc.salesPriceHalallas > doc.priceHalallas) {
+    throw AppError.badRequest('سعر التخفيض يجب أن يكون أقل من أو يساوي السعر');
+  }
+
+  // الغلاف
+  if (files.cover) {
+    const saved = await moveDiskFileToUploads(files.cover, 'images/books');
+    if (doc.imageRelPath) {
+      await deleteLocalByRelPath(doc.imageRelPath);
+    }
+    doc.image = saved.url;
+    doc.imageRelPath = saved.relPath;
+  } else if (typeof data.image === 'string') {
+    doc.image = data.image; // URL خارجي
+    // اختياري: doc.imageRelPath = undefined;
+  }
+
+  // طبيعة الكتاب
+  if (typeof data.isDigital === 'boolean') {
+    doc.isDigital = data.isDigital;
+  }
+
+  if (doc.isDigital) {
+    if (files.pdf) {
+      const saved = await moveDiskFileToUploads(files.pdf, 'files/books');
+      if (doc.pdfRelPath) {
+        await deleteLocalByRelPath(doc.pdfRelPath);
+      }
+      doc.pdfUrl = saved.url;
+      doc.pdfRelPath = saved.relPath;
+    } else if (typeof data.pdfUrl === 'string') {
+      if (doc.pdfRelPath) {
+        await deleteLocalByRelPath(doc.pdfRelPath);
+      }
+      doc.pdfUrl = data.pdfUrl;
+      doc.pdfRelPath = undefined;
+    }
+    if (!doc.pdfUrl) throw AppError.badRequest('ملف PDF أو رابط PDF مطلوب للكتاب الرقمي');
+    doc.stock = null;
+  } else {
+    if (typeof data.stock === 'number') doc.stock = data.stock;
+    if (typeof doc.stock !== 'number') doc.stock = 0;
+
+    // تنظيف PDF لو تحوّل لورقي
+    if (files.pdf || typeof data.pdfUrl === 'string') {
+      if (doc.pdfRelPath) {
+        await deleteLocalByRelPath(doc.pdfRelPath);
+      }
+      doc.pdfUrl = undefined as any;
+      doc.pdfRelPath = undefined;
+    }
+  }
+
+  // التصنيفات
+  if (Array.isArray(data.categories)) {
+    const before = (doc.categories || []).map((x) => String(x));
+    const after = data.categories;
+    const removed = before.filter((id) => !after.includes(id));
+    const added = after.filter((id) => !before.includes(id));
+    doc.categories = after as any;
+    await Promise.all([incBooksCount(added, +1), incBooksCount(removed, -1)]);
+  }
+
+  await doc.save();
+  return doc.toJSON();
+}
+
+/** حذف منطقي */
+export async function softDeleteBook(id: string) {
+  const doc = await Book.findById(id);
+  if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود أو محذوف');
+
+  doc.isDeleted = true;
+  await doc.save();
+
+  await incBooksCount(doc.categories as ObjectId[], -1);
+}
+
+/** استرجاع كتاب */
+export async function restoreBook(id: string) {
+  const doc = await Book.findById(id);
+  if (!doc) throw AppError.notFound('الكتاب غير موجود');
+  if (!doc.isDeleted) return;
+
+  const desired = doc.slug || slugFromLocalized(doc.title);
+  doc.slug = await makeUniqueSlug(Book, desired, {
+    excludeId: String(doc._id),
+    filter: { isDeleted: false },
+  });
+  doc.isDeleted = false;
+  await doc.save();
+
+  await incBooksCount(doc.categories as ObjectId[], +1);
+}
+
+/** كتب الصفحة الرئيسية */
+export async function getHomepageBooks(input: {
+  limit?: number;
+  language?: 'ar' | 'en';
+  isDigital?: boolean;
+  inStock?: boolean;
+}) {
+  const limit = Math.min(50, Math.max(1, input.limit ?? 12));
+
+  const q: any = { isDeleted: false, showInHomepage: true };
+  if (input.language) q.language = input.language;
+  if (typeof input.isDigital === 'boolean') q.isDigital = input.isDigital;
+  if (input.inStock === true) {
+    q.$or = [{ isDigital: true }, { isDigital: false, stock: { $gt: 0 } }];
+    // هنا مش محتاج AND لأنّك أصلاً مثبت showInHomepage=true
+  }
+
+  const items = await Book.find(q).sort({ createdAt: -1 }).limit(limit).lean({ virtuals: true });
+  return items;
+}
+
+/** الكتب + التصنيفات غير الفارغة */
+export async function getBooksWithCategories(input: ListBooksInput) {
+  const page = Math.max(1, input.page || 1);
+  const limit = Math.min(100, Math.max(1, input.limit || 10));
+  const skip = (page - 1) * limit;
+
+  const q = buildBooksQuery(input);
+  const sort = parseSort(input.sort);
+
+  const [items, total, categories] = await Promise.all([
+    Book.find(q).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }),
+    Book.countDocuments(q),
+    Category.find({ isDeleted: false, booksCount: { $gt: 0 }, scopes: 'book' })
+      .sort({ order: 1, createdAt: -1 })
+      .lean(),
+  ]);
+
+  const pages = Math.max(1, Math.ceil(total / limit));
+  return {
+    books: items,
+    categories,
+    meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
+  };
+}
