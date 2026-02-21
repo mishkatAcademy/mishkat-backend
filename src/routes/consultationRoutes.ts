@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import {
+  createConsultationOfferingCtrl,
   listOfferingsCtrl,
   listInstructorsCtrl,
   availabilityCtrl,
@@ -33,12 +34,23 @@ import {
   calendarQuerySchema,
 } from '../validations/consultation.schema';
 
-// لأن الكنترولر بيستخدم :instructorId (مش :id)
+import { isAdmin } from '../middlewares/authMiddleware';
+import { createConsultationOfferingBodySchema } from '../validations/consultation.schema';
+
 const instructorIdParamsSchema = z.object({
   instructorId: z.string().length(24, 'Invalid instructorId'),
 });
 
 const router = Router();
+
+// admin only Create offering
+router.post(
+  '/offering',
+  protect,
+  isAdmin,
+  validateRequest({ body: createConsultationOfferingBodySchema }),
+  createConsultationOfferingCtrl,
+);
 
 /** 🟢 Public: offerings & instructors */
 router.get('/offerings', validateQuery(listOfferingsQuerySchema), listOfferingsCtrl);

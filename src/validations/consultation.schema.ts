@@ -13,6 +13,31 @@ export const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const consultationTypeEnum = z.enum(['academic', 'social', 'coaching']);
 
+const localizedTextSchema = z
+  .object({
+    ar: z.string().trim().min(1).optional(),
+    en: z.string().trim().min(1).optional(),
+  })
+  .refine((v) => Boolean((v.ar && v.ar.trim()) || (v.en && v.en.trim())), {
+    message: 'Provide at least one of: title.ar or title.en',
+  });
+
+export const createConsultationOfferingBodySchema = z.object({
+  // type: z.enum(['academic', 'social', 'coaching']),
+  type: consultationTypeEnum,
+  title: localizedTextSchema,
+  description: z
+    .object({
+      ar: z.string().trim().min(1).optional(),
+      en: z.string().trim().min(1).optional(),
+    })
+    .optional(),
+  durationMinutes: z.coerce.number().int().min(10).max(240),
+  priceHalalas: z.coerce.number().int().min(0),
+  isActive: z.coerce.boolean().optional().default(true),
+  order: z.coerce.number().int().optional().default(0),
+});
+
 /* ========== Offerings ==========
  * ?type + activeOnly + pagination اختيارياً
  * ============================== */
@@ -135,6 +160,7 @@ export const rescheduleBodySchema = z
 /* ========== Types ==========
  * مفيدة في السيرفس/الكونترولر
  * ====================================== */
+export type CreateConsultationOfferingBody = z.infer<typeof createConsultationOfferingBodySchema>;
 export type ListOfferingsQuery = z.infer<typeof listOfferingsQuerySchema>;
 export type ListInstructorsQuery = z.infer<typeof listInstructorsQuerySchema>;
 export type AvailabilityQuery = z.infer<typeof availabilityQuerySchema>;

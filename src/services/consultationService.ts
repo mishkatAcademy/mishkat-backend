@@ -18,11 +18,40 @@ import { saveOnce, getIfExists } from '../utils/inMemoryOnceStore';
 import { toRiyadhYMD } from '../utils/time';
 import { createOrderForConsultationPaid } from './orderService';
 
+import type { CreateConsultationOfferingBody } from '../validations/consultation.schema';
+
 // إعدادات افتراضية من env (يرجى تعريفها في env.ts مع Defaults)
 const HOLD_TTL_MINUTES = env.CONSULTATION_HOLD_TTL_MINUTES ?? 15;
 const DEFAULT_CANCEL_WINDOW_HOURS = env.CONSULTATION_CANCEL_WINDOW_HOURS ?? 24;
 
 /* =================== Offerings =================== */
+export async function createConsultationOffering(data: CreateConsultationOfferingBody) {
+  const ar = data.title?.ar?.trim();
+  const en = data.title?.en?.trim();
+
+  const maybeDup = await ConsultationOffering.findOne({
+    type: data.type,
+    isActive: true,
+    $or: [...(ar ? [{ 'title.ar': ar }] : []), ...(en ? [{ 'title.en': en }] : [])],
+  }).lean();
+
+  if (maybeDup) {
+    throw AppError.badRequest('Offering with same title already exists (active)');
+  }
+
+  const created = await ConsultationOffering.create({
+    type: data.type,
+    title: data.title,
+    description: data.description,
+    durationMinutes: data.durationMinutes,
+    priceHalalas: data.priceHalalas,
+    isActive: data.isActive ?? true,
+    order: data.order ?? 0,
+  });
+
+  return created.toJSON();
+}
+
 export async function listOfferingsService(
   type?: 'academic' | 'social' | 'coaching',
   activeOnly = true,

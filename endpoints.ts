@@ -493,16 +493,10 @@ const categoryEndpoints = [
   🧑‍🏫 Consultation Endpoints (Controllers’ shape)
   Base: /api/v1/consultations
 ============================ */
-// /* ============================
-//   📞 Consultation Endpoints (Controllers’ shape)
-//   Base: /api/v1/consultations
-// ============================ */
 
 /* --------------------------------
 🟢 Public: Offerings
 --------------------------------- */
-
-// Public: list offerings → ok({ offerings })
 const listOfferings = {
   url: '/api/v1/consultations/offerings?type=academic&activeOnly=true&page=1&limit=20&sort=order:asc,createdAt:desc',
   method: 'get',

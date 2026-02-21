@@ -4,6 +4,7 @@ import catchAsync from '../utils/catchAsync';
 import { ok, created } from '../utils/response';
 
 import {
+  createConsultationOffering,
   listOfferingsService,
   listInstructorsService,
   availabilityService,
@@ -16,6 +17,13 @@ import {
   cancelConsultationService,
   calendarOverlayService,
 } from '../services/consultationService';
+
+/** POST /consultations/offering */
+export const createConsultationOfferingCtrl = catchAsync(async (req: Request, res: Response) => {
+  const body = (req.validated?.body ?? req.body) as any;
+  const offering = await createConsultationOffering(body);
+  return created(res, { offering });
+});
 
 /** GET /consultations/offerings */
 export const listOfferingsCtrl = catchAsync(async (req: Request, res: Response) => {
