@@ -11,6 +11,7 @@ import ResearchRequest from '../models/ResearchRequest';
 import { protect, isAdmin } from '../middlewares/authMiddleware';
 import AppError from '../utils/AppError';
 import { validateObjectId } from '../middlewares/validateObjectId';
+import { getAbsolutePath } from '../services/localFiles.disk';
 
 const pipe = promisify(pipeline);
 const router = Router();
@@ -21,6 +22,7 @@ const router = Router();
  * - هنا بنبني المسار المطلق ونضمن إنه داخل الجذر
  */
 const UPLOADS_ROOT = path.join(process.cwd(), 'uploads', 'research');
+// const UPLOADS_ROOT = path.join(process.cwd(), 'uploads', 'private', 'research');
 
 /** ✅ تأكد أن المسار داخل الجذر (منع path traversal) */
 function assertInsideRoot(absPath: string) {
@@ -147,7 +149,8 @@ router.get(
       const att = reqDoc.attachments.find((a) => a.storedName === storedName);
       if (!att) throw AppError.notFound('مرفق غير موجود');
 
-      const absPath = path.join(process.cwd(), att.relativePath);
+      // const absPath = path.join(process.cwd(), att.relativePath);
+      const absPath = getAbsolutePath(att.relativePath);
       assertInsideRoot(absPath);
 
       await sendAttachment(req, res, absPath, att.mimeType, att.originalName);
@@ -179,7 +182,8 @@ router.get(
       const att = reqDoc.attachments.find((a) => a.storedName === storedName);
       if (!att) throw AppError.notFound('مرفق غير موجود');
 
-      const absPath = path.join(process.cwd(), att.relativePath);
+      // const absPath = path.join(process.cwd(), att.relativePath);
+      const absPath = getAbsolutePath(att.relativePath);
       assertInsideRoot(absPath);
 
       await sendAttachment(req, res, absPath, att.mimeType, att.originalName);

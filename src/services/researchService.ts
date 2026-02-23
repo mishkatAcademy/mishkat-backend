@@ -60,7 +60,7 @@ export async function createResearchRequestService({ userId, body, files }: Crea
   const moved: { relPath: string }[] = [];
   try {
     const stored = await Promise.all(
-      (files || []).map((f) => moveDiskFileToUploads(f, `private/research/${userId}`)),
+      (files || []).map((f) => moveDiskFileToUploads(f, `research/${userId}`)),
     );
 
     const attachments = stored.map((s, idx) => ({
