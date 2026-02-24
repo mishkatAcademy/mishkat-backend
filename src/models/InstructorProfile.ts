@@ -25,7 +25,8 @@ export type SupportedConsultationType = 'academic' | 'social' | 'coaching';
 
 export interface IInstructorProfile extends Document {
   user: Types.ObjectId;
-  displayName?: string;
+  displayName?: LocalizedText;
+  headline?: LocalizedText;
   bio?: LocalizedText;
   academicDegree?: LocalizedText;
   experiences?: {
@@ -34,7 +35,10 @@ export interface IInstructorProfile extends Document {
     startDate?: Date;
     endDate?: Date;
     description?: LocalizedText;
+    location?: LocalizedText;
+    untilYear?: number;
   }[];
+  certifications?: { title?: LocalizedText; issuer?: LocalizedText; year?: number }[];
   supportedTypes: SupportedConsultationType[];
   timezone: string;
   bufferMinutes: number;
@@ -110,7 +114,8 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
 
-    displayName: { type: String, trim: true },
+    displayName: { type: LocalizedTextSchema },
+    headline: { type: LocalizedTextSchema },
 
     bio: { type: LocalizedTextSchema },
     academicDegree: { type: LocalizedTextSchema },
@@ -122,6 +127,18 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
           startDate: Date,
           endDate: Date,
           description: { type: LocalizedTextSchema },
+          location: { type: LocalizedTextSchema },
+          untilYear: { type: Number, min: 1900, max: 2100 },
+        },
+        { _id: false },
+      ),
+    ],
+    certifications: [
+      new Schema(
+        {
+          title: { type: LocalizedTextSchema },
+          issuer: { type: LocalizedTextSchema },
+          year: { type: Number, min: 1900, max: 2100 },
         },
         { _id: false },
       ),

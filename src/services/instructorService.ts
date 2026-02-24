@@ -7,19 +7,24 @@ import { toRiyadhYMD } from '../utils/time';
 import { dateInRiyadhToUTC } from '../utils/timeSlots';
 
 type SupportedType = 'academic' | 'social' | 'coaching';
+type Localized = { ar?: string; en?: string };
 
 type CreateInput = {
   userId: string;
-  displayName?: string;
-  bio?: { ar?: string; en?: string };
-  academicDegree?: { ar?: string; en?: string };
+  displayName?: Localized;
+  headline?: Localized;
+  bio?: Localized;
+  academicDegree?: Localized;
   experiences?: {
-    title?: { ar?: string; en?: string };
-    organization?: { ar?: string; en?: string };
+    title?: Localized;
+    organization?: Localized;
     startDate?: Date;
     endDate?: Date;
-    description?: { ar?: string; en?: string };
+    description?: Localized;
+    location?: Localized;
+    untilYear?: number;
   }[];
+  certifications?: { title?: Localized; issuer?: Localized; year?: number }[];
   supportedTypes?: SupportedType[];
   timezone?: string;
   bufferMinutes?: number;
@@ -38,9 +43,11 @@ type UpdateInput = Partial<Omit<CreateInput, 'userId'>>;
 function allowedUpdateKeysAdmin(): (keyof UpdateInput)[] {
   return [
     'displayName',
+    'headline',
     'bio',
     'academicDegree',
     'experiences',
+    'certifications',
     'supportedTypes',
     'timezone',
     'bufferMinutes',
@@ -73,21 +80,36 @@ function parseSort(sortStr?: string): Record<string, 1 | -1> {
 }
 
 /** Helper: شكل العرض النهائي للـ Instructor (avatarUrl من User) */
+function bestLocalizedText(v?: Localized, fallback?: string) {
+  const ar = v?.ar?.trim();
+  const en = v?.en?.trim();
+  return ar || en || fallback?.trim() || undefined;
+}
+
 function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
   const includeUser = !!opts?.includeUser;
 
   const user = p.user && typeof p.user === 'object' ? p.user : undefined;
-
   const fullNameFromUser = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim();
 
-  const base = {
+  const displayNameObj = p.displayName as Localized | undefined;
+
+  const base: any = {
     id: String(p._id),
     userId: String(user?._id ?? p.user),
-    displayName: p.displayName || fullNameFromUser || undefined,
-    avatarUrl: user?.avatarUrl,
+
+    // ✅ رجّع object كما هو (LocalizedText)
+    displayName: displayNameObj,
+    headline: p.headline,
     bio: p.bio,
     academicDegree: p.academicDegree,
     experiences: p.experiences,
+    certifications: p.certifications,
+
+    // ✅ string جاهز للـ UI
+    displayNameText: bestLocalizedText(displayNameObj, fullNameFromUser),
+
+    avatarUrl: user?.avatarUrl,
     supportedTypes: p.supportedTypes,
     timezone: p.timezone,
     bufferMinutes: p.bufferMinutes,
@@ -101,7 +123,7 @@ function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
     isActive: p.isActive,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
-  } as any;
+  };
 
   if (includeUser) {
     base.user = user
@@ -249,11 +271,18 @@ export async function listInstructorsAdmin(input: {
     const safe = input.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const r = new RegExp(safe, 'i');
     q.$or = [
-      { displayName: r },
+      { 'displayName.ar': r },
+      { 'displayName.en': r },
+      { 'headline.ar': r },
+      { 'headline.en': r },
       { 'bio.ar': r },
       { 'bio.en': r },
       { 'academicDegree.ar': r },
       { 'academicDegree.en': r },
+      { 'experiences.title.ar': r },
+      { 'experiences.title.en': r },
+      { 'experiences.organization.ar': r },
+      { 'experiences.organization.en': r },
     ] as any;
   }
 

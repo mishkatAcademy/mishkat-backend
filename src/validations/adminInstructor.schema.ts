@@ -10,6 +10,24 @@ const localizedTextSchema = z
   })
   .optional();
 
+const localizedText = z
+  .object({
+    ar: z.string().trim().min(1).optional(),
+    en: z.string().trim().min(1).optional(),
+  })
+  .refine((v) => Boolean(v.ar || v.en), { message: 'Provide ar or en' });
+
+const localizedTextOrString = z.union([
+  z
+    .string()
+    .trim()
+    .min(1)
+    .transform((s) => ({ ar: s })),
+  localizedText,
+]);
+
+const localizedTextOpt = localizedTextOrString.optional();
+
 export const adminCreateInstructorSchema = z
   .object({
     // User
@@ -25,7 +43,35 @@ export const adminCreateInstructorSchema = z
     verifyEmail: z.coerce.boolean().optional().default(false),
 
     // Profile (اختياري)
-    displayName: z.string().trim().min(2).max(120).optional(),
+    displayName: localizedTextOpt,
+    headline: localizedTextOpt,
+    bio: localizedTextOpt,
+    academicDegree: localizedTextOpt,
+
+    experiences: z
+      .array(
+        z.object({
+          title: localizedTextOpt,
+          organization: localizedTextOpt,
+          startDate: z.coerce.date().optional(),
+          endDate: z.coerce.date().optional(),
+          description: localizedTextOpt,
+          location: localizedTextOpt,
+          untilYear: z.coerce.number().int().min(1900).max(2100).optional(),
+        }),
+      )
+      .optional(),
+
+    certifications: z
+      .array(
+        z.object({
+          title: localizedTextOpt,
+          issuer: localizedTextOpt,
+          year: z.coerce.number().int().min(1900).max(2100).optional(),
+        }),
+      )
+      .optional(),
+
     supportedTypes: z
       .array(z.enum(['academic', 'social', 'coaching']))
       .min(1)

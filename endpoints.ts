@@ -520,30 +520,9 @@ const listOfferings = {
   },
 };
 
-// // Public: GET /consultations/offerings → ok({ offerings })
-// const listOfferings = {
-//   url: '/api/v1/consultations/offerings?type=academic&activeOnly=true',
-//   method: 'get',
-//   response: {
-//     offerings: [
-//       {
-//         id: '6720ff...001',
-//         type: 'academic',
-//         title: { ar: 'استشارة أكاديمية 30 دقيقة', en: 'Academic 30m' },
-//         description: { ar: '...', en: '...' },
-//         durationMinutes: 30,
-//         priceHalalas: 10000,
-//         isActive: true,
-//         order: 1,
-//       },
-//     ],
-//   },
-// };
-
 /* --------------------------------
 🟢 Public: Instructors
 --------------------------------- */
-
 // Public: list instructors → ok({ instructors })
 const listInstructors = {
   url: '/api/v1/consultations/instructors?type=academic&activeOnly=true&page=1&limit=20&sort=createdAt:desc',
@@ -564,7 +543,9 @@ const listInstructors = {
           { day: 0, start: '10:00', end: '14:00' },
           { day: 0, start: '17:00', end: '21:00' },
         ],
+        meetingMethod: 'manual',
         isActive: true,
+        experiences: [],
         createdAt: '2026-01-18T10:00:00.000Z',
         updatedAt: '2026-01-18T10:00:00.000Z',
       },
@@ -572,28 +553,9 @@ const listInstructors = {
   },
 };
 
-// // Public: GET /consultations/instructors → ok({ instructors })
-// const listPublicInstructors = {
-//   url: '/api/v1/consultations/instructors?type=social&activeOnly=true',
-//   method: 'get',
-//   response: {
-//     instructors: [
-//       {
-//         id: '6721aa...010',
-//         user: '66cf0b6e9c9f1c0012faabcd',
-//         displayName: 'د. أحمد',
-//         supportedTypes: ['social'],
-//         timezone: 'Asia/Riyadh',
-//         isActive: true,
-//       },
-//     ],
-//   },
-// };
-
 /* --------------------------------
 🟢 Public: Availability (single day slots)
 --------------------------------- */
-
 // Public: availability day → ok({ slots })
 const availabilityDay = {
   url: '/api/v1/consultations/instructors/65eaaaaad9e3b2a0d1a99999/availability?date=2026-01-31&offeringId=65f0c8c0d9e3b2a0d1a11111',
@@ -616,22 +578,9 @@ const availabilityDay = {
   },
 };
 
-// // Public: GET availability for a day → ok({ slots })
-// const availability = {
-//   url: '/api/v1/consultations/instructors/66cf0b6e9c9f1c0012faabcd/availability?date=2025-10-25&offeringId=6720ff...001',
-//   method: 'get',
-//   response: {
-//     slots: [
-//       { start: '2025-10-25T10:00:00.000Z', end: '2025-10-25T10:30:00.000Z' },
-//       { start: '2025-10-25T11:00:00.000Z', end: '2025-10-25T11:30:00.000Z' },
-//     ],
-//   },
-// };
-
 /* --------------------------------
 🟢 Public: Range Slots (slots by date)
 --------------------------------- */
-
 // Public: range slots → ok({ slotsByDate })
 const rangeSlots = {
   url: '/api/v1/consultations/instructors/65eaaaaad9e3b2a0d1a99999/slots?from=2026-01-31&to=2026-02-07&offeringId=65f0c8c0d9e3b2a0d1a11111',
@@ -644,23 +593,9 @@ const rangeSlots = {
   },
 };
 
-// // Public: GET range slots → ok({ slotsByDate })
-// const rangeSlots = {
-//   url: '/api/v1/consultations/instructors/66cf0b6e9c9f1c0012faabcd/slots?from=2025-10-25&to=2025-10-27&offeringId=6720ff...001',
-//   method: 'get',
-//   response: {
-//     slotsByDate: {
-//       '2025-10-25': [{ start: '2025-10-25T10:00:00.000Z', end: '2025-10-25T10:30:00.000Z' }],
-//       '2025-10-26': [],
-//       '2025-10-27': [{ start: '2025-10-27T12:00:00.000Z', end: '2025-10-27T12:30:00.000Z' }],
-//     },
-//   },
-// };
-
 /* --------------------------------
 🟢 Public: Calendar Overlay (Version II UI)
 --------------------------------- */
-
 // Public: calendar overlay → ok(data)  (الكونترولر بيرجع ok(res, data) مباشرة)
 const calendarOverlay = {
   url: '/api/v1/consultations/instructors/65eaaaaad9e3b2a0d1a99999/calendar?from=2026-01-31&to=2026-02-07',
@@ -709,40 +644,9 @@ const calendarOverlay = {
   },
 };
 
-// // Public: GET /instructors/:instructorId/calendar
-// const c = {
-//   timezone: 'Asia/Riyadh',
-//   rules: {
-//     bufferMinutes: 10,
-//     minNoticeHours: 24,
-//     maxAdvanceDays: 30,
-//     rescheduleWindowHours: 12,
-//   },
-//   weekly: [
-//     { day: 0, start: '10:00', end: '14:00' },
-//     { day: 0, start: '17:00', end: '21:00' },
-//   ],
-//   exceptions: [{ dateYMD: '2026-01-31', closed: false, slots: [{ start: '12:00', end: '14:00' }] }],
-//   busy: [
-//     {
-//       kind: 'booking',
-//       status: 'confirmed',
-//       start: '2026-01-31T09:00:00.000Z',
-//       end: '2026-01-31T10:00:00.000Z',
-//     },
-//     {
-//       kind: 'hold',
-//       start: '2026-01-31T12:00:00.000Z',
-//       end: '2026-01-31T12:30:00.000Z',
-//       expiresAt: '2026-01-29T10:00:00.000Z',
-//     },
-//   ],
-// };
-
 /* --------------------------------
 🟢 Public: Hold + Payment (booking intent)
 --------------------------------- */
-
 // Public: create hold → created({ paymentUrl, holdId })
 const createHoldAndPayment = {
   url: '/api/v1/consultations/hold',
@@ -836,20 +740,9 @@ const moyasarWebhook = {
   },
 };
 
-// // Public: Webhook (Moyasar) → ok(result)
-// const consultationWebhook = {
-//   url: '/api/v1/consultations/webhook/moyasar',
-//   method: 'post',
-//   body: {
-//     /* payload من مزوّد الدفع */
-//   },
-//   response: { ok: true },
-// };
-
 /* --------------------------------
 🔐 Protected: My Consultations
 --------------------------------- */
-
 // Protected: list my bookings → ok(items, meta)
 const listMyConsultations = {
   url: '/api/v1/consultations/me?page=1&limit=10&status=confirmed',
@@ -882,32 +775,6 @@ const listMyConsultations = {
     meta: { total: 1, page: 1, limit: 10, pages: 1, hasNextPage: false, hasPrevPage: false },
   },
 };
-
-// // Auth (user): GET my bookings → ok(data, meta)
-// const listMyConsultations = {
-//   url: '/api/v1/consultations/me?page=1&limit=10',
-//   method: 'get',
-//   response: {
-//     data: [
-//       {
-//         id: '6731bb...111',
-//         user: '66cf0b6e9c9f1c0012fa0001',
-//         instructor: '66cf0b6e9c9f1c0012faabcd',
-//         offering: {
-//           type: 'academic',
-//           title: { ar: 'استشارة 30 دقيقة', en: '30m' },
-//           durationMinutes: 30,
-//           priceHalalas: 10000,
-//         },
-//         start: '2025-10-25T10:00:00.000Z',
-//         end: '2025-10-25T10:30:00.000Z',
-//         status: 'confirmed',
-//         totals: { priceHalalas: 10000, vatHalalas: 1500, grandTotalHalalas: 11500 },
-//       },
-//     ],
-//     meta: { total: 1, page: 1, limit: 10, pages: 1, hasNextPage: false, hasPrevPage: false },
-//   },
-// };
 
 // Protected: get one booking → ok({ booking })
 const getMyConsultation = {
@@ -942,21 +809,6 @@ const getMyConsultation = {
   },
 };
 
-// // Auth (user): GET one booking → ok({ booking })
-// const getMyConsultation = {
-//   url: '/api/v1/consultations/me/6731bb...111',
-//   method: 'get',
-//   response: {
-//     booking: {
-//       id: '6731bb...111',
-//       start: '2025-10-25T10:00:00.000Z',
-//       end: '2025-10-25T10:30:00.000Z',
-//       status: 'confirmed',
-//       // ...
-//     },
-//   },
-// };
-
 // Protected: reschedule → ok({ booking })
 const rescheduleConsultation = {
   url: '/api/v1/consultations/me/65f2aaaa.../reschedule',
@@ -979,21 +831,6 @@ const rescheduleConsultation = {
   },
 };
 
-// // Auth (user): POST reschedule → ok({ booking })
-// const rescheduleConsultation = {
-//   url: '/api/v1/consultations/me/6731bb...111/reschedule',
-//   method: 'post',
-//   body: { newStartAt: '2025-10-27T12:00:00.000Z' },
-//   response: {
-//     booking: {
-//       id: '6731bb...111',
-//       start: '2025-10-27T12:00:00.000Z',
-//       end: '2025-10-27T12:30:00.000Z',
-//       status: 'confirmed',
-//     },
-//   },
-// };
-
 // Protected: cancel → ok({ cancelled, eligibleForRefund })
 const cancelConsultation = {
   url: '/api/v1/consultations/me/65f2aaaa.../cancel',
@@ -1001,13 +838,6 @@ const cancelConsultation = {
   headers: { Authorization: 'Bearer <token>' },
   response: { cancelled: true, eligibleForRefund: true },
 };
-
-// // Auth (user): POST cancel → ok({ cancelled, eligibleForRefund })
-// const cancelConsultation = {
-//   url: '/api/v1/consultations/me/6731bb...111/cancel',
-//   method: 'post',
-//   response: { cancelled: true, eligibleForRefund: true },
-// };
 
 /* --------------------------------
 ✅ Export list
@@ -1027,25 +857,10 @@ const consultationEndpoints = [
   cancelConsultation,
 ];
 
-// const consultationEndpoints = [
-//   listOfferings,
-//   listPublicInstructors,
-//   availability,
-//   rangeSlots,
-//   createHold,
-//   createBooking,
-//   consultationWebhook,
-//   listMyConsultations,
-//   getMyConsultation,
-//   rescheduleConsultation,
-//   cancelConsultation,
-// ];
-
 /* ============================
   🎓 Instructor Profiles Endpoints (Controllers’ shape)
   Base: /api/v1/instructors
-  ============================ */
-
+============================ */
 /* --------------------------------
 Instructor (self)
 --------------------------------- */
@@ -1131,7 +946,6 @@ const meUpdateInstructorProfile = {
 /* --------------------------------
 ✅ Atomic endpoints (recommended)
 --------------------------------- */
-
 // Instructor (self): PUT /instructors/me/weekly → ok({ profile })
 const meReplaceWeekly = {
   url: '/api/v1/instructors/me/weekly',
@@ -1210,7 +1024,6 @@ const meDeleteException = {
 /* --------------------------------
 Admin
 --------------------------------- */
-
 // Admin: POST /instructors → created({ profile })
 const adminCreateInstructor = {
   url: '/api/v1/instructors',
@@ -1261,46 +1074,6 @@ const adminCreateInstructor = {
   },
 };
 
-// // Admin: POST create → created({ profile })
-// const adminCreateInstructor = {
-//   url: '/api/v1/instructors',
-//   method: 'post',
-//   body: {
-//     userId: '66cf0b6e9c9f1c0012faabcd',
-//     displayName: 'د. أحمد',
-//     bio: { ar: 'نبذة عربية', en: 'English bio' },
-//     academicDegree: { ar: 'دكتوراه علم نفس', en: 'PhD Psychology' },
-//     experiences: [
-//       {
-//         title: { ar: 'أخصائي', en: 'Specialist' },
-//         organization: { ar: 'مركز كذا', en: 'Clinic XYZ' },
-//         startDate: '2022-01-01',
-//         description: { ar: '...', en: '...' },
-//       },
-//     ],
-//     supportedTypes: ['academic', 'social'],
-//     timezone: 'Asia/Riyadh',
-//     bufferMinutes: 10,
-//     minNoticeHours: 24,
-//     maxAdvanceDays: 30,
-//     rescheduleWindowHours: 12,
-//     weekly: [{ day: 0, start: '10:00', end: '14:00' }],
-//     meetingMethod: 'manual',
-//     meetingUrl: 'https://meet.example.com/ahmed',
-//     isActive: true,
-//   },
-//   response: {
-//     profile: {
-//       id: '6721aa...010',
-//       user: '66cf0b6e9c9f1c0012faabcd',
-//       displayName: 'د. أحمد',
-//       supportedTypes: ['academic', 'social'],
-//       timezone: 'Asia/Riyadh',
-//       isActive: true,
-//     },
-//   },
-// };
-
 // Admin: GET /instructors → ok(data, meta)
 const adminListInstructors = {
   url: '/api/v1/instructors?page=1&limit=10&type=academic&activeOnly=true&search=أحمد&sort=createdAt:desc',
@@ -1328,25 +1101,6 @@ const adminListInstructors = {
     },
   },
 };
-
-// // Admin: GET list → ok(data, meta)
-// const adminListInstructors = {
-//   url: '/api/v1/instructors?page=1&limit=10&type=academic&activeOnly=true&search=أحمد&sort=createdAt:desc',
-//   method: 'get',
-//   response: {
-//     data: [
-//       {
-//         id: '6721aa...010',
-//         user: '66cf0b6e9c9f1c0012faabcd',
-//         displayName: 'د. أحمد',
-//         supportedTypes: ['academic'],
-//         timezone: 'Asia/Riyadh',
-//         isActive: true,
-//       },
-//     ],
-//     meta: { total: 1, page: 1, limit: 10, pages: 1, hasNextPage: false, hasPrevPage: false },
-//   },
-// };
 
 // Admin: GET /instructors/:userId → ok({ profile })
 const adminGetInstructor = {
@@ -1429,13 +1183,3 @@ const instructorEndpoints = [
   adminActivateInstructor,
   adminDeactivateInstructor,
 ];
-
-// const instructorEndpoints = [
-//   adminCreateInstructor,
-//   adminListInstructors,
-//   adminGetInstructor,
-//   adminUpdateInstructor,
-//   adminSetActive,
-//   meGetInstructorProfile,
-//   meUpdateInstructorProfile,
-// ];

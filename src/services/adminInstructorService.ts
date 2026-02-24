@@ -3,6 +3,15 @@ import User from '../models/User';
 import InstructorProfile from '../models/InstructorProfile';
 import AppError from '../utils/AppError';
 
+type Localized = { ar?: string; en?: string };
+
+function toLocalizedMaybe(v: any): Localized | undefined {
+  if (!v) return undefined;
+  if (typeof v === 'string') return { ar: v };
+  if (typeof v === 'object' && ('ar' in v || 'en' in v)) return v;
+  return undefined;
+}
+
 export async function adminCreateInstructorService(input: any) {
   // 1) guards
   const exists = await User.findOne({ email: input.email }).select('_id').lean();
@@ -27,11 +36,16 @@ export async function adminCreateInstructorService(input: any) {
 
   try {
     const userId = String(user._id);
-
     // 3) create profile
     const profile = await InstructorProfile.create({
       user: userId,
-      displayName: input.displayName,
+      displayName: toLocalizedMaybe(input.displayName),
+      headline: toLocalizedMaybe(input.headline),
+      bio: toLocalizedMaybe(input.bio),
+      academicDegree: toLocalizedMaybe(input.academicDegree),
+      experiences: input.experiences,
+      certifications: input.certifications,
+
       supportedTypes: input.supportedTypes ?? ['academic'],
       timezone: input.timezone ?? 'Asia/Riyadh',
       bufferMinutes: input.bufferMinutes ?? 10,

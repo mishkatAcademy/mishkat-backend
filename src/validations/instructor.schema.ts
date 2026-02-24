@@ -6,6 +6,15 @@ export const localizedTextSchema = z.object({
   en: z.string().trim().min(1).optional(),
 });
 
+const localizedTextRequired = z
+  .object({
+    ar: z.string().trim().min(1).optional(),
+    en: z.string().trim().min(1).optional(),
+  })
+  .refine((v) => Boolean(v.ar || v.en), { message: 'Provide ar or en' });
+
+const localizedTextOptional = localizedTextRequired.optional();
+
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
@@ -100,20 +109,34 @@ const supportedTypeEnum = z.enum(['academic', 'social', 'coaching']);
 // 1) base بدون defaults
 const base = z.object({
   userId: z.string().length(24),
-  displayName: z.string().trim().max(120).optional(),
-  bio: localizedTextSchema.optional(),
-  academicDegree: localizedTextSchema.optional(),
+  displayName: localizedTextOptional,
+  headline: localizedTextOptional,
+  bio: localizedTextOptional,
+  academicDegree: localizedTextOptional,
   experiences: z
     .array(
       z.object({
-        title: localizedTextSchema.optional(),
-        organization: localizedTextSchema.optional(),
+        title: localizedTextOptional,
+        organization: localizedTextOptional,
         startDate: z.coerce.date().optional(),
         endDate: z.coerce.date().optional(),
-        description: localizedTextSchema.optional(),
+        description: localizedTextOptional,
+        location: localizedTextOptional,
+        untilYear: z.coerce.number().int().min(1900).max(2100).optional(),
       }),
     )
     .optional(),
+
+  certifications: z
+    .array(
+      z.object({
+        title: localizedTextOptional,
+        issuer: localizedTextOptional,
+        year: z.coerce.number().int().min(1900).max(2100).optional(),
+      }),
+    )
+    .optional(),
+
   supportedTypes: z.array(supportedTypeEnum).optional(),
   timezone: z.string().optional(),
   bufferMinutes: z.number().int().min(0).max(180).optional(),
