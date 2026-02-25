@@ -6,6 +6,7 @@ import {
   createConsultationOfferingCtrl,
   listOfferingsCtrl,
   listInstructorsCtrl,
+  getPublicInstructorCtrl,
   availabilityCtrl,
   rangeSlotsCtrl,
   createHoldAndPaymentCtrl,
@@ -41,7 +42,24 @@ const instructorIdParamsSchema = z.object({
   instructorId: z.string().length(24, 'Invalid instructorId'),
 });
 
+const publicinstructorIdParamsSchema = z.object({
+  userId: z.string().length(24, 'Invalid userId'),
+});
+
+const publicInstructorQuerySchema = z
+  .object({
+    type: z.enum(['academic', 'social', 'coaching']).optional(),
+    activeOnly: z.coerce.boolean().optional().default(true),
+  })
+  .strict();
+
 const router = Router();
+
+router.get(
+  '/instructors/:userId',
+  validateRequest({ params: publicinstructorIdParamsSchema, query: publicInstructorQuerySchema }),
+  getPublicInstructorCtrl,
+);
 
 // admin only Create offering
 router.post(

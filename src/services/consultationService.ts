@@ -74,6 +74,48 @@ export async function listInstructorsService(opts: {
   return InstructorProfile.find(q).lean();
 }
 
+export async function getPublicInstructorByUserIdService(
+  userId: string,
+  opts?: { activeOnly?: boolean; type?: 'academic' | 'social' | 'coaching' },
+) {
+  const activeOnly = opts?.activeOnly !== false;
+
+  const q: any = { user: userId };
+  if (activeOnly) q.isActive = true;
+  if (opts?.type) q.supportedTypes = opts.type;
+
+  const prof = await InstructorProfile.findOne(q)
+    .populate({ path: 'user', select: 'firstName lastName avatarUrl isDeleted' })
+    .lean();
+
+  if (!prof || (prof as any).user?.isDeleted) throw AppError.notFound('Instructor not found');
+
+  const u: any = prof.user;
+
+  // Public DTO فقط
+  return {
+    userId: String(u?._id ?? prof.user),
+    displayName: prof.displayName ?? { ar: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() },
+    headline: prof.headline,
+    bio: prof.bio,
+    academicDegree: prof.academicDegree,
+    experiences: prof.experiences,
+    certifications: prof.certifications,
+    supportedTypes: prof.supportedTypes,
+    timezone: prof.timezone,
+    bufferMinutes: prof.bufferMinutes,
+    minNoticeHours: prof.minNoticeHours,
+    maxAdvanceDays: prof.maxAdvanceDays,
+    rescheduleWindowHours: prof.rescheduleWindowHours,
+    weekly: prof.weekly,
+    exceptions: prof.exceptions, // لو عايز تخفيها Public شيلها وخليها في calendar endpoint
+    meetingMethod: prof.meetingMethod,
+    meetingUrl: prof.meetingUrl, // لو meetingUrl حساس، رجّعه فقط بعد الدفع/للمستخدمين
+    isActive: prof.isActive,
+    avatarUrl: u?.avatarUrl,
+  };
+}
+
 /* ============= مساعد داخلي: توفّر ليوم بمدة صريحة ============= */
 async function computeAvailabilityForDayWithDuration(
   instructorUserId: string,

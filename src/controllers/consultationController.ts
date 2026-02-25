@@ -7,6 +7,7 @@ import {
   createConsultationOffering,
   listOfferingsService,
   listInstructorsService,
+  getPublicInstructorByUserIdService,
   availabilityService,
   rangeSlotsPublicService,
   createHoldAndPaymentService,
@@ -37,6 +38,19 @@ export const listInstructorsCtrl = catchAsync(async (req: Request, res: Response
   const { type, activeOnly } = (req.validated?.query as any) || {};
   const items = await listInstructorsService({ type, activeOnly: activeOnly !== false });
   return ok(res, { instructors: items });
+});
+
+/** GET /consultations/instructors/:userId */
+export const getPublicInstructorCtrl = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const { type, activeOnly } = (req.validated?.query as any) ?? req.query;
+
+  const instructor = await getPublicInstructorByUserIdService(String(userId), {
+    type,
+    activeOnly: activeOnly !== 'false' && activeOnly !== false,
+  });
+
+  return ok(res, { instructor });
 });
 
 /** GET /consultations/instructors/:instructorId/availability?date=YYYY-MM-DD&offeringId=... */
