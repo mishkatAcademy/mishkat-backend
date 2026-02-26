@@ -108,12 +108,20 @@ export async function getPublicInstructorByUserIdService(
     maxAdvanceDays: prof.maxAdvanceDays,
     rescheduleWindowHours: prof.rescheduleWindowHours,
     weekly: prof.weekly,
-    exceptions: prof.exceptions, // لو عايز تخفيها Public شيلها وخليها في calendar endpoint
+    exceptions: prof.exceptions,
     meetingMethod: prof.meetingMethod,
     meetingUrl: prof.meetingUrl, // لو meetingUrl حساس، رجّعه فقط بعد الدفع/للمستخدمين
     isActive: prof.isActive,
     avatarUrl: u?.avatarUrl,
   };
+}
+
+function ensureDate(v: any, label: string): Date {
+  const d = v instanceof Date ? v : new Date(v);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
+    throw AppError.badRequest(`Invalid ${label}`);
+  }
+  return d;
 }
 
 /* ============= مساعد داخلي: توفّر ليوم بمدة صريحة ============= */
@@ -133,15 +141,35 @@ async function computeAvailabilityForDayWithDuration(
 
   const dayIx = dayIndexSaturday0(date);
 
+  const dayMidnightUTC = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'date midnight');
+
   // هل في استثناء لهذا اليوم؟
-  const exception = (inst.exceptions || []).find((e) => {
-    const d = dateInRiyadhToUTC(date, '00:00');
+
+  const exception = (inst.exceptions || []).find((e: any) => {
+    const expDate = ensureDate(e.date, 'exception.date');
     return (
-      e.date.getUTCFullYear() === d.getUTCFullYear() &&
-      e.date.getUTCMonth() === d.getUTCMonth() &&
-      e.date.getUTCDate() === d.getUTCDate()
+      expDate.getUTCFullYear() === dayMidnightUTC.getUTCFullYear() &&
+      expDate.getUTCMonth() === dayMidnightUTC.getUTCMonth() &&
+      expDate.getUTCDate() === dayMidnightUTC.getUTCDate()
     );
   });
+
+  // const exception = (inst.exceptions || []).find((e) => {
+  //   return (
+  //     e.date.getUTCFullYear() === dayMidnightUTC.getUTCFullYear() &&
+  //     e.date.getUTCMonth() === dayMidnightUTC.getUTCMonth() &&
+  //     e.date.getUTCDate() === dayMidnightUTC.getUTCDate()
+  //   );
+  // });
+
+  // const exception = (inst.exceptions || []).find((e) => {
+  //   const d = dateInRiyadhToUTC(date, '00:00');
+  //   return (
+  //     e.date.getUTCFullYear() === d.getUTCFullYear() &&
+  //     e.date.getUTCMonth() === d.getUTCMonth() &&
+  //     e.date.getUTCDate() === d.getUTCDate()
+  //   );
+  // });
 
   if (exception?.closed) return [];
 
@@ -162,8 +190,11 @@ async function computeAvailabilityForDayWithDuration(
   const afterNotice = raw.filter((s) => s.start >= minStartUTC);
 
   // جلب حجوزات مؤكدة + Holds نشطة لهذا اليوم
-  const dayStart = dateInRiyadhToUTC(date, '00:00');
-  const dayEnd = dateInRiyadhToUTC(date, '23:59');
+  // const dayStart = dateInRiyadhToUTC(date, '00:00');
+  // const dayEnd = dateInRiyadhToUTC(date, '23:59');
+
+  const dayStart = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'dayStart');
+  const dayEnd = ensureDate(dateInRiyadhToUTC(date, '23:59'), 'dayEnd');
 
   const [bookings, holds] = await Promise.all([
     ConsultationBooking.find({
@@ -270,8 +301,11 @@ export async function calendarOverlayService({
   const maxAdvanceDays = inst.maxAdvanceDays ?? env.CONSULTATION_MAX_ADVANCE_DAYS ?? 30;
   const rescheduleWindowHours = inst.rescheduleWindowHours ?? 12;
 
-  const dayStart = dateInRiyadhToUTC(from, '00:00');
-  const dayEnd = dateInRiyadhToUTC(to, '23:59');
+  // const dayStart = dateInRiyadhToUTC(from, '00:00');
+  // const dayEnd = dateInRiyadhToUTC(to, '23:59');
+
+  const dayStart = ensureDate(dateInRiyadhToUTC(from, '00:00'), 'dayStart');
+  const dayEnd = ensureDate(dateInRiyadhToUTC(to, '23:59'), 'dayEnd');
 
   // Exceptions داخل المدى (نقارن يوم/شهر/سنة على Riyadh midnight)
   const exceptions = (inst.exceptions || [])
