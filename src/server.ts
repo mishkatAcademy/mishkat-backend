@@ -59,6 +59,8 @@ import reviewRoutes from './routes/reviewRoutes';
 const app = express();
 app.disable('x-powered-by');
 
+mongoose.set('sanitizeFilter', false);
+
 const apiPrefix = '/api/v1';
 const isProd = env.NODE_ENV === 'production';
 
