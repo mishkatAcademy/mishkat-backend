@@ -259,13 +259,5 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   if (statusCode >= 500) log.error(logPayload, 'Request failed (server error)');
   else log.warn(logPayload, 'Request failed (client error)');
 
-  console.log('MONGO_CAST:', {
-    name: err?.name,
-    path: err?.path,
-    value: err?.value,
-    valueType: typeof err?.value,
-    message: err?.message,
-  });
-
   res.status(statusCode).json(body);
 }

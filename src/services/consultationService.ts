@@ -196,15 +196,6 @@ async function computeAvailabilityForDayWithDuration(
   const dayStart = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'dayStart');
   const dayEnd = ensureDate(dateInRiyadhToUTC(date, '23:59'), 'dayEnd');
 
-  // مؤقتا وسيتم حذفه
-  console.log('[availability]', {
-    date,
-    instructorUserId,
-    durationMinutes,
-    dayStart: dayStart.toISOString(),
-    dayEnd: dayEnd.toISOString(),
-  });
-
   const [bookings, holds] = await Promise.all([
     ConsultationBooking.find({
       instructor: instructorUserId,
@@ -212,8 +203,10 @@ async function computeAvailabilityForDayWithDuration(
       start: { $lt: dayEnd },
       end: { $gt: dayStart },
     })
+      .setOptions({ sanitizeFilter: false })
       .select('start end')
       .lean(),
+
     ConsultationHold.find({
       instructor: instructorUserId,
       status: 'holding',
@@ -221,9 +214,30 @@ async function computeAvailabilityForDayWithDuration(
       start: { $lt: dayEnd },
       end: { $gt: dayStart },
     })
+      .setOptions({ sanitizeFilter: false })
       .select('start end')
       .lean(),
   ]);
+
+  // const [bookings, holds] = await Promise.all([
+  //   ConsultationBooking.find({
+  //     instructor: instructorUserId,
+  //     status: { $in: ['confirmed', 'completed', 'refunded'] },
+  //     start: { $lt: dayEnd },
+  //     end: { $gt: dayStart },
+  //   })
+  //     .select('start end')
+  //     .lean(),
+  //   ConsultationHold.find({
+  //     instructor: instructorUserId,
+  //     status: 'holding',
+  //     expiresAt: { $gt: new Date() },
+  //     start: { $lt: dayEnd },
+  //     end: { $gt: dayStart },
+  //   })
+  //     .select('start end')
+  //     .lean(),
+  // ]);
 
   const blocked = [...bookings, ...holds];
   const free = afterNotice.filter(
