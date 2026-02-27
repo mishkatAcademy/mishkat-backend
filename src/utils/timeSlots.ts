@@ -40,6 +40,15 @@ export function minutesToHHMM(mins: number): string {
   return `${pad(h)}:${pad(mm)}`;
 }
 
+function riyadhNoonUTC(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) throw new Error(`Invalid date YYYY-MM-DD: ${dateStr}`);
+
+  // 12:00 (الرياض) = 09:00 UTC  => نطرح 3 ساعات
+  const ms = Date.UTC(y, m - 1, d, 12 - RIYADH_OFFSET_MIN / 60, 0, 0, 0);
+  return new Date(ms);
+}
+
 /** يعيد Date في UTC تمثّل منتصف الليل المحلي بالرياض لهذا التاريخ "YYYY-MM-DD" */
 function riyadhMidnightUTC(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -54,10 +63,15 @@ function riyadhMidnightUTC(dateStr: string): Date {
  * 0=السبت, 1=الأحد, 2=الاثنين, 3=الثلاثاء, 4=الأربعاء, 5=الخميس, 6=الجمعة
  * (باستخدام منتصف الليل المحلي للرياض)
  */
+// export function dayIndexSaturday0(dateStr: string): number {
+//   const midnight = riyadhMidnightUTC(dateStr);
+//   const jsSunday0 = midnight.getUTCDay(); // 0=Sunday..6=Saturday
+//   return (jsSunday0 + 1) % 7; // يحوّله إلى 0=Saturday..6=Friday
+// }
 export function dayIndexSaturday0(dateStr: string): number {
-  const midnight = riyadhMidnightUTC(dateStr);
-  const jsSunday0 = midnight.getUTCDay(); // 0=Sunday..6=Saturday
-  return (jsSunday0 + 1) % 7; // يحوّله إلى 0=Saturday..6=Friday
+  const noon = riyadhNoonUTC(dateStr);
+  const jsSunday0 = noon.getUTCDay(); // 0=Sunday..6=Saturday (but now correct day)
+  return (jsSunday0 + 1) % 7; // 0=Saturday..6=Friday
 }
 
 /**
