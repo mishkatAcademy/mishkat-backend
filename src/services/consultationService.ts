@@ -196,6 +196,15 @@ async function computeAvailabilityForDayWithDuration(
   const dayStart = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'dayStart');
   const dayEnd = ensureDate(dateInRiyadhToUTC(date, '23:59'), 'dayEnd');
 
+  // مؤقتا وسيتم حذفه
+  console.log('[availability]', {
+    date,
+    instructorUserId,
+    durationMinutes,
+    dayStart: dayStart.toISOString(),
+    dayEnd: dayEnd.toISOString(),
+  });
+
   const [bookings, holds] = await Promise.all([
     ConsultationBooking.find({
       instructor: instructorUserId,
