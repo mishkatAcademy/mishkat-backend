@@ -32,6 +32,8 @@ export async function connectDB() {
   const uri = env.MONGODB_URI; // ✅ مصدر الحقيقة الوحيد
   const masked = maskUri(uri);
 
+  mongoose.set('sanitizeFilter', false as any);
+  console.log('[mongoose] sanitizeFilter=', mongoose.get('sanitizeFilter'));
   try {
     await mongoose.connect(uri, {
       // مهل قصيرة لرسائل خطأ أسرع لو السيرفر مش شغال
