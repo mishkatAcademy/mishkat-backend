@@ -196,31 +196,28 @@ async function computeAvailabilityForDayWithDuration(
   const dayStart = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'dayStart');
   const dayEnd = ensureDate(dateInRiyadhToUTC(date, '23:59'), 'dayEnd');
 
-  const bookingsq = (
+  const [bookings, holds] = await Promise.all([
     ConsultationBooking.find({
       instructor: instructorUserId,
       status: { $in: ['confirmed', 'completed', 'refunded'] },
       start: { $lt: dayEnd },
       end: { $gt: dayStart },
-    }) as any
-  )
-    .sanitizeFilter(false)
-    .select('start end')
-    .lean();
+    })
+      .setOptions({ sanitizeFilter: false })
+      .select('start end')
+      .lean(),
 
-  const holdsq = (
     ConsultationHold.find({
       instructor: instructorUserId,
       status: 'holding',
       expiresAt: { $gt: new Date() },
       start: { $lt: dayEnd },
       end: { $gt: dayStart },
-    }) as any
-  )
-    .sanitizeFilter(false)
-    .select('start end')
-    .lean();
-  const [bookings, holds] = await Promise.all([bookingsq, holdsq]);
+    })
+      .setOptions({ sanitizeFilter: false })
+      .select('start end')
+      .lean(),
+  ]);
 
   // const [bookings, holds] = await Promise.all([
   //   ConsultationBooking.find({
