@@ -94,8 +94,8 @@ router.get(
 );
 
 /** 🟢 Public: create hold + payment (والـ alias /bookings) */
-router.post('/hold', validateRequestBody(holdBodySchema), createHoldAndPaymentCtrl);
-router.post('/bookings', validateRequestBody(bookingBodySchema), createBookingAliasCtrl);
+router.post('/hold', protect, validateRequestBody(holdBodySchema), createHoldAndPaymentCtrl);
+router.post('/bookings', protect, validateRequestBody(bookingBodySchema), createBookingAliasCtrl);
 
 /** 🟢 Public: payment webhook (سيبه بدون validate لو هتتحقق من التوقيع بـ raw body) */
 router.post('/webhook/moyasar', consultationWebhookCtrl);

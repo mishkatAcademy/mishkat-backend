@@ -40,6 +40,7 @@ export function minutesToHHMM(mins: number): string {
   return `${pad(h)}:${pad(mm)}`;
 }
 
+// بنستخدم noon بدل midnight عشان midnight في UTC يروح لليوم السابق ويبوّظ حساب اليوم
 function riyadhNoonUTC(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   if (!y || !m || !d) throw new Error(`Invalid date YYYY-MM-DD: ${dateStr}`);
@@ -50,13 +51,14 @@ function riyadhNoonUTC(dateStr: string): Date {
 }
 
 /** يعيد Date في UTC تمثّل منتصف الليل المحلي بالرياض لهذا التاريخ "YYYY-MM-DD" */
-function riyadhMidnightUTC(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (!y || !m || !d) throw new Error(`Invalid date YYYY-MM-DD: ${dateStr}`);
-  // 00:00 (الرياض) = 21:00 (اليوم السابق) UTC → نطرح 3 ساعات
-  const ms = Date.UTC(y, m - 1, d, 0 - RIYADH_OFFSET_MIN / 60, 0, 0, 0);
-  return new Date(ms);
-}
+// واضح إنها مش شغالة مظبوط
+// function riyadhMidnightUTC(dateStr: string): Date {
+//   const [y, m, d] = dateStr.split('-').map(Number);
+//   if (!y || !m || !d) throw new Error(`Invalid date YYYY-MM-DD: ${dateStr}`);
+//   // 00:00 (الرياض) = 21:00 (اليوم السابق) UTC → نطرح 3 ساعات
+//   const ms = Date.UTC(y, m - 1, d, 0 - RIYADH_OFFSET_MIN / 60, 0, 0, 0);
+//   return new Date(ms);
+// }
 
 /**
  * يحسب اليوم 0..6 بحيث:

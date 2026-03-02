@@ -1,20 +1,41 @@
 // src/utils/money.ts
-/** حوّل مبلغ عشري (ريال) إلى هللة (int). يقبل number أو string "12.34" */
-export function toHalalas(amount: number | string): number {
-  if (typeof amount === 'string') {
-    // تنظيف بسيط وparse
-    const n = Number(amount.replace(/\s/g, ''));
-    if (!Number.isFinite(n)) throw new Error('Invalid amount string');
-    amount = n;
-  }
-  if (!Number.isFinite(amount)) throw new Error('Invalid amount');
-  // نستخدم الضرب والقسمة لتجنّب كسور الفاصلة العائمة
-  return Math.round(amount * 100);
+import AppError from './AppError';
+
+/** نظّف سترنج فلوس: شيل مسافات/فواصل */
+function normalizeAmountString(s: string) {
+  return s.replace(/\s/g, '').replace(/,/g, '');
 }
 
-/** حوّل هللة إلى مبلغ (ريال) بدقة 2 */
+/** تحقق max 2 decimals (قبل التحويل) */
+function ensureMax2Decimals(n: number) {
+  // يمنع 12.345
+  if (Math.round(n * 100) !== n * 100) {
+    throw AppError.badRequest('Amount must have at most 2 decimal places');
+  }
+}
+
+/** حوّل مبلغ (SAR) إلى هللة (int). يقبل number أو string "12.34" */
+export function toHalalas(amount: number | string): number {
+  let n: number;
+
+  if (typeof amount === 'string') {
+    const cleaned = normalizeAmountString(amount);
+    n = Number(cleaned);
+    if (!Number.isFinite(n)) throw AppError.badRequest('Invalid amount');
+  } else {
+    n = amount;
+    if (!Number.isFinite(n)) throw AppError.badRequest('Invalid amount');
+  }
+
+  if (n < 0) throw AppError.badRequest('Amount must be >= 0');
+  ensureMax2Decimals(n);
+
+  return Math.round(n * 100);
+}
+
+/** حوّل هللة إلى مبلغ (ريال) */
 export function fromHalalas(halalas: number): number {
-  if (!Number.isInteger(halalas) || halalas < 0) throw new Error('Invalid halalas');
+  if (!Number.isInteger(halalas) || halalas < 0) throw AppError.badRequest('Invalid halalas');
   return halalas / 100;
 }
 
@@ -28,16 +49,20 @@ export function formatMoney(
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
+/** helpers */
 /** أمور بسيطة للتعامل مع الهللات */
 export const halalas = {
   fromNumber(n: number) {
-    // مثال: 12.34 SAR → 1234 هللة
-    return Math.round(n * 100);
+    return toHalalas(n);
   },
   toSARString(h: number) {
-    return (h / 100).toFixed(2); // "12.34"
+    return fromHalalas(h).toFixed(2);
+  },
+  toSAR(h: number) {
+    return fromHalalas(h);
   },
 };

@@ -4,7 +4,7 @@ import type { Express } from 'express';
 import Book from '../models/Book';
 import Category, { CategoryModel } from '../models/Category';
 import { AppError } from '../utils/AppError';
-import { toHalalas } from '../utils/money';
+import { toHalalas, fromHalalas } from '../utils/money';
 import { slugFromLocalized, makeUniqueSlug } from '../utils/slug';
 import { moveDiskFileToUploads, deleteLocalByRelPath } from './localFiles.disk';
 
@@ -130,6 +130,14 @@ function buildBooksQuery(input: {
   }
 
   return and.length ? { ...base, $and: and } : base;
+}
+
+function bookToPublicDTO(b: any) {
+  return {
+    ...b,
+    price: fromHalalas(b.priceHalallas),
+    salesPrice: typeof b.salesPriceHalallas === 'number' ? fromHalalas(b.salesPriceHalallas) : null,
+  };
 }
 
 /* ------------ Core Services (روابط فقط) ------------ */
@@ -270,7 +278,7 @@ export async function listBooks(input: ListBooksInput) {
 
   const pages = Math.max(1, Math.ceil(total / limit));
   return {
-    items,
+    items: items.map(bookToPublicDTO),
     meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
   };
 }
@@ -279,7 +287,8 @@ export async function listBooks(input: ListBooksInput) {
 export async function getBook(id: string) {
   const doc = await Book.findById(id).lean({ virtuals: true });
   if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
-  return doc;
+  // return doc;
+  return bookToPublicDTO(doc);
 }
 
 /** تحديث كتاب (روابط فقط) */
@@ -490,7 +499,7 @@ export async function getHomepageBooks(input: {
   }
 
   const items = await Book.find(q).sort({ createdAt: -1 }).limit(limit).lean({ virtuals: true });
-  return items;
+  return items.map(bookToPublicDTO);
 }
 
 /** الكتب + التصنيفات غير الفارغة */
@@ -512,7 +521,7 @@ export async function getBooksWithCategories(input: ListBooksInput) {
 
   const pages = Math.max(1, Math.ceil(total / limit));
   return {
-    books: items,
+    books: items.map(bookToPublicDTO),
     categories,
     meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
   };

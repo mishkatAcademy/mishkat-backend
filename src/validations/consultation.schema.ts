@@ -22,8 +22,13 @@ const localizedTextSchema = z
     message: 'Provide at least one of: title.ar or title.en',
   });
 
+const moneyNumber = z.coerce
+  .number({ invalid_type_error: 'السعر يجب أن يكون رقمًا' })
+  .nonnegative('السعر لا يمكن أن يكون سالبًا')
+  .refine((v) => Number.isFinite(v), 'قيمة غير صالحة')
+  .refine((v) => Math.round(v * 100) === v * 100, 'السعر يجب أن يحتوي على خانتين عشريتين كحد أقصى');
+
 export const createConsultationOfferingBodySchema = z.object({
-  // type: z.enum(['academic', 'social', 'coaching']),
   type: consultationTypeEnum,
   title: localizedTextSchema,
   description: z
@@ -33,7 +38,7 @@ export const createConsultationOfferingBodySchema = z.object({
     })
     .optional(),
   durationMinutes: z.coerce.number().int().min(10).max(240),
-  priceHalalas: z.coerce.number().int().min(0),
+  priceSAR: moneyNumber,
   isActive: z.coerce.boolean().optional().default(true),
   order: z.coerce.number().int().optional().default(0),
 });

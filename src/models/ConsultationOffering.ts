@@ -27,7 +27,18 @@ const ConsultationOfferingSchema = new Schema<IConsultationOffering>(
     title: { type: LocalizedTextSchema, required: true },
     description: { type: LocalizedTextSchema },
     durationMinutes: { type: Number, required: true, min: 10, max: 240 },
-    priceHalalas: { type: Number, required: true, min: 0 },
+    priceHalalas: {
+      type: Number,
+      required: true,
+      min: 0,
+      validate: {
+        validator(v: number) {
+          return Number.isInteger(v);
+        },
+        message: 'priceHalalas must be an integer (halalas)',
+      },
+    },
+
     isActive: { type: Boolean, default: true, index: true },
     order: { type: Number, default: 0 },
   },
@@ -58,6 +69,10 @@ ConsultationOfferingSchema.index({ type: 1, durationMinutes: 1, isActive: 1 });
 
 // (اختياري) فهرس نصي مبسّط للبحث بالعنوان
 // ConsultationOfferingSchema.index({ 'title.ar': 'text', 'title.en': 'text' }, { default_language: 'none' });
+
+ConsultationOfferingSchema.virtual('priceSAR').get(function (this: any) {
+  return typeof this.priceHalalas === 'number' ? this.priceHalalas / 100 : undefined;
+});
 
 export default mongoose.model<IConsultationOffering>(
   'ConsultationOffering',

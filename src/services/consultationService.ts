@@ -16,9 +16,39 @@ import {
 } from '../utils/timeSlots';
 import { saveOnce, getIfExists } from '../utils/inMemoryOnceStore';
 import { toRiyadhYMD } from '../utils/time';
+import { toHalalas, fromHalalas } from '../utils/money';
 import { createOrderForConsultationPaid } from './orderService';
 
 import type { CreateConsultationOfferingBody } from '../validations/consultation.schema';
+
+type HoldPaymentResult = {
+  hold: { id: string; status: string; expiresAt: Date };
+  payment: {
+    provider: 'moyasar';
+    paymentUrl: string;
+    paymentId: string;
+    currency: 'SAR';
+    amount: number;
+    amountHalalas?: number;
+  };
+  bookingPreview: {
+    instructorId: string;
+    offeringId: string;
+    date: string;
+    startHHMM: string;
+    startUtc: Date;
+    endUtc: Date;
+    durationMinutes: number;
+  };
+  totals: {
+    price: number;
+    vat: number;
+    grandTotal: number;
+    priceHalalas?: number;
+    vatHalalas?: number;
+    grandTotalHalalas?: number;
+  };
+};
 
 // إعدادات افتراضية من env (يرجى تعريفها في env.ts مع Defaults)
 const HOLD_TTL_MINUTES = env.CONSULTATION_HOLD_TTL_MINUTES ?? 15;
@@ -44,7 +74,7 @@ export async function createConsultationOffering(data: CreateConsultationOfferin
     title: data.title,
     description: data.description,
     durationMinutes: data.durationMinutes,
-    priceHalalas: data.priceHalalas,
+    priceHalalas: toHalalas(data.priceSAR),
     isActive: data.isActive ?? true,
     order: data.order ?? 0,
   });
@@ -52,14 +82,12 @@ export async function createConsultationOffering(data: CreateConsultationOfferin
   return created.toJSON();
 }
 
-export async function listOfferingsService(
-  type?: 'academic' | 'social' | 'coaching',
-  activeOnly = true,
-) {
+export async function listOfferingsService(type?: any, activeOnly = true) {
   const q: any = {};
   if (type) q.type = type;
   if (activeOnly) q.isActive = true;
-  return ConsultationOffering.find(q).sort({ order: 1, createdAt: -1 }).lean();
+
+  return ConsultationOffering.find(q).sort({ order: 1, createdAt: -1 }).lean({ virtuals: true });
 }
 
 /* =================== Instructors =================== */
@@ -154,23 +182,6 @@ async function computeAvailabilityForDayWithDuration(
     );
   });
 
-  // const exception = (inst.exceptions || []).find((e) => {
-  //   return (
-  //     e.date.getUTCFullYear() === dayMidnightUTC.getUTCFullYear() &&
-  //     e.date.getUTCMonth() === dayMidnightUTC.getUTCMonth() &&
-  //     e.date.getUTCDate() === dayMidnightUTC.getUTCDate()
-  //   );
-  // });
-
-  // const exception = (inst.exceptions || []).find((e) => {
-  //   const d = dateInRiyadhToUTC(date, '00:00');
-  //   return (
-  //     e.date.getUTCFullYear() === d.getUTCFullYear() &&
-  //     e.date.getUTCMonth() === d.getUTCMonth() &&
-  //     e.date.getUTCDate() === d.getUTCDate()
-  //   );
-  // });
-
   if (exception?.closed) return [];
 
   // نوافذ اليوم
@@ -188,10 +199,6 @@ async function computeAvailabilityForDayWithDuration(
 
   // فلتر minNotice
   const afterNotice = raw.filter((s) => s.start >= minStartUTC);
-
-  // جلب حجوزات مؤكدة + Holds نشطة لهذا اليوم
-  // const dayStart = dateInRiyadhToUTC(date, '00:00');
-  // const dayEnd = dateInRiyadhToUTC(date, '23:59');
 
   const dayStart = ensureDate(dateInRiyadhToUTC(date, '00:00'), 'dayStart');
   const dayEnd = ensureDate(dateInRiyadhToUTC(date, '23:59'), 'dayEnd');
@@ -413,7 +420,7 @@ export async function createHoldAndPaymentService({
 }) {
   // Idempotency
   if (idempotencyKey) {
-    const cached = await getIfExists<{ paymentUrl: string; holdId: string }>(idempotencyKey);
+    const cached = await getIfExists<HoldPaymentResult>(idempotencyKey);
     if (cached) return cached;
   }
 
@@ -497,8 +504,42 @@ export async function createHoldAndPaymentService({
   };
   await hold.save();
 
-  const result = { paymentUrl: pay.paymentUrl, holdId: String(hold._id) };
+  const result = {
+    hold: {
+      id: String(hold._id),
+      status: hold.status,
+      expiresAt: hold.expiresAt,
+    },
+    payment: {
+      provider: 'moyasar',
+      paymentUrl: pay.paymentUrl,
+      paymentId: pay.paymentId,
+      currency: 'SAR',
+      amount: fromHalalas(grand),
+      amountHalalas: grand,
+    },
+    bookingPreview: {
+      instructorId,
+      offeringId,
+      date,
+      startHHMM,
+      startUtc: start,
+      endUtc: end,
+      durationMinutes: off.durationMinutes,
+    },
+    totals: {
+      price: fromHalalas(off.priceHalalas),
+      vat: fromHalalas(vat),
+      grandTotal: fromHalalas(grand),
+
+      priceHalalas: off.priceHalalas,
+      vatHalalas: vat,
+      grandTotalHalalas: grand,
+    },
+  };
+
   if (idempotencyKey) await saveOnce(idempotencyKey, result, 24 * 60 * 60 * 1000);
+
   return result;
 }
 
