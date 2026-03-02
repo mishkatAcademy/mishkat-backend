@@ -87,7 +87,8 @@ export async function listOfferingsService(type?: any, activeOnly = true) {
   if (type) q.type = type;
   if (activeOnly) q.isActive = true;
 
-  return ConsultationOffering.find(q).sort({ order: 1, createdAt: -1 }).lean({ virtuals: true });
+  const docs = await ConsultationOffering.find(q).sort({ order: 1, createdAt: -1 });
+  return docs.map((d) => d.toJSON());
 }
 
 /* =================== Instructors =================== */
