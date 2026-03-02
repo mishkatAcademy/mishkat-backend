@@ -96,7 +96,7 @@ export const calendarOverlayCtrl = catchAsync(async (req: Request, res: Response
 
 /** POST /consultations/hold  (أو /consultations/bookings كواجهة alias) */
 export const createHoldAndPaymentCtrl = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id?.toString();
+  const userId = req.user!.id?.toString();
   const { instructorId, offeringId, date, startHHMM, applicant, idempotencyKey } =
     (req.validated?.body as any) || req.body;
 
