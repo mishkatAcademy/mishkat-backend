@@ -69,7 +69,7 @@ function parseCategoriesCSV(csv?: string): string[] | undefined {
   return csv
     .split(',')
     .map((x) => x.trim())
-    .filter((x) => x.length === 24);
+    .filter((x) => /^[a-fA-F0-9]{24}$/.test(x));
 }
 
 async function incBooksCount(catIds: ObjectId[] | undefined, delta: 1 | -1) {
@@ -98,11 +98,19 @@ function buildBooksQuery(input: {
   if (typeof input.isDigital === 'boolean') base.isDigital = input.isDigital;
   if (typeof input.showInHomepage === 'boolean') base.showInHomepage = input.showInHomepage;
 
+  // ✅ فلترة السعر على السعر الفعّال: salesPriceHalallas إن وُجد، وإلا priceHalallas
   if (typeof input.minPrice === 'number' || typeof input.maxPrice === 'number') {
-    const p: any = {};
-    if (typeof input.minPrice === 'number') p.$gte = toHalalas(input.minPrice);
-    if (typeof input.maxPrice === 'number') p.$lte = toHalalas(input.maxPrice);
-    base.priceHalallas = p;
+    const minH = typeof input.minPrice === 'number' ? toHalalas(input.minPrice) : undefined;
+    const maxH = typeof input.maxPrice === 'number' ? toHalalas(input.maxPrice) : undefined;
+
+    const conds: any[] = [];
+
+    const effectiveExpr = { $ifNull: ['$salesPriceHalallas', '$priceHalallas'] };
+
+    if (typeof minH === 'number') conds.push({ $gte: [effectiveExpr, minH] });
+    if (typeof maxH === 'number') conds.push({ $lte: [effectiveExpr, maxH] });
+
+    if (conds.length) and.push({ $expr: { $and: conds } });
   }
 
   const categoryIds = parseCategoriesCSV(input.categories);
@@ -511,15 +519,60 @@ export async function getBooksWithCategories(input: ListBooksInput) {
   const q = buildBooksQuery(input);
   const sort = parseSort(input.sort);
 
+  // 1) books + total (زي ما عندك)
   const [items, total, categories] = await Promise.all([
     Book.find(q).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }),
     Book.countDocuments(q),
-    Category.find({ isDeleted: false, booksCount: { $gt: 0 }, scopes: 'book' })
-      .sort({ order: 1, createdAt: -1 })
-      .lean(),
+
+    // 2) ✅ Categories filtered by SAME query (مع count لكل تصنيف)
+    Book.aggregate([
+      { $match: q },
+      { $unwind: '$categories' },
+      { $group: { _id: '$categories', booksCount: { $sum: 1 } } },
+      {
+        $lookup: {
+          from: Category.collection.name, // غالباً "categories"
+          localField: '_id',
+          foreignField: '_id',
+          as: 'cat',
+        },
+      },
+      { $unwind: '$cat' },
+
+      // ✅ فلترة الـ Category نفسها
+      {
+        $match: {
+          'cat.isDeleted': false,
+          'cat.scopes': { $in: ['book'] },
+        },
+      },
+
+      // ✅ رتب التصنيفات زي ما بتحب
+      { $sort: { 'cat.order': 1, 'cat.createdAt': -1 } },
+
+      // ✅ رجّع شكل نظيف للفرونت
+      {
+        $project: {
+          _id: 0,
+          id: { $toString: '$cat._id' },
+          title: '$cat.title',
+          slug: '$cat.slug',
+          description: '$cat.description',
+          image: '$cat.image',
+          scopes: '$cat.scopes',
+          order: '$cat.order',
+          createdAt: '$cat.createdAt',
+          updatedAt: '$cat.updatedAt',
+
+          // count حسب الفلاتر الحالية
+          booksCountFiltered: '$booksCount',
+        },
+      },
+    ]),
   ]);
 
   const pages = Math.max(1, Math.ceil(total / limit));
+
   return {
     books: items.map(bookToPublicDTO),
     categories,

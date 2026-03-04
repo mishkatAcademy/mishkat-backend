@@ -777,7 +777,7 @@ const listMyConsultations = {
 };
 
 // Protected: get one booking → ok({ booking })
-const getMyConsultation = {
+const getMyConsultationById = {
   url: '/api/v1/consultations/me/65f2aaaa...',
   method: 'get',
   headers: { Authorization: 'Bearer <token>' },
@@ -852,7 +852,7 @@ const consultationEndpoints = [
   createBookingAlias,
   moyasarWebhook,
   listMyConsultations,
-  getMyConsultation,
+  getMyConsultationById,
   rescheduleConsultation,
   cancelConsultation,
 ];

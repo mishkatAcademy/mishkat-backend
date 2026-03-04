@@ -24,7 +24,11 @@ const baseSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
 
   APP_URL: z.string().url().default('http://localhost:3000'),
+  // APP_BASE_URL: z.string().url().default('http://localhost:5000'),
   APP_BASE_URL: z.string().url().default('http://localhost:5000'),
+  NGINX_SECURE_LINK_SECRET: z.string().min(1, 'NGINX_SECURE_LINK_SECRET is required'),
+  NGINX_SECURE_LINK_TTL_SECONDS: z.coerce.number().int().min(30).max(86400).default(600),
+
   APP_NAME: z.string().default('Mishkat Academy'),
 
   MONGODB_URI: z

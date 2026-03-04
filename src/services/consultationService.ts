@@ -50,6 +50,25 @@ type HoldPaymentResult = {
   };
 };
 
+function bookingToPublicDTO(b: any) {
+  const t = b?.totals || {};
+  return {
+    ...b,
+    totals: {
+      // SAR (for UI)
+      price: typeof t.priceHalalas === 'number' ? fromHalalas(t.priceHalalas) : 0,
+      vat: typeof t.vatHalalas === 'number' ? fromHalalas(t.vatHalalas) : 0,
+      grandTotal: typeof t.grandTotalHalalas === 'number' ? fromHalalas(t.grandTotalHalalas) : 0,
+      currency: 'SAR' as const,
+
+      // keep halalas (backward)
+      priceHalalas: t.priceHalalas,
+      vatHalalas: t.vatHalalas,
+      grandTotalHalalas: t.grandTotalHalalas,
+    },
+  };
+}
+
 // إعدادات افتراضية من env (يرجى تعريفها في env.ts مع Defaults)
 const HOLD_TTL_MINUTES = env.CONSULTATION_HOLD_TTL_MINUTES ?? 15;
 const DEFAULT_CANCEL_WINDOW_HOURS = env.CONSULTATION_CANCEL_WINDOW_HOURS ?? 24;
@@ -682,15 +701,16 @@ export async function listMyConsultationsService(userId: string, page = 1, limit
 
   const pages = Math.max(1, Math.ceil(total / l));
   return {
-    items,
+    items: items.map(bookingToPublicDTO),
     meta: { total, page: p, limit: l, pages, hasNextPage: p < pages, hasPrevPage: p > 1 },
   };
 }
 
 export async function getMyConsultationService(userId: string, id: string) {
-  const b = await ConsultationBooking.findById(id).lean();
+  const b: any = await ConsultationBooking.findById(id).lean();
   if (!b || String(b.user) !== String(userId)) throw AppError.notFound('Not found');
-  return b;
+
+  return bookingToPublicDTO(b);
 }
 
 /* ============= إعادة الجدولة ============= */
@@ -736,7 +756,8 @@ export async function rescheduleConsultationService(
   b.end = newEnd;
   await b.save();
 
-  return b.toJSON();
+  const fresh = ConsultationBooking.findById(b._id).lean();
+  return bookingToPublicDTO(fresh);
 }
 
 /* ============= الإلغاء ============= */
