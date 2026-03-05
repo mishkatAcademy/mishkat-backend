@@ -2,6 +2,7 @@
 import type { Request, Response } from 'express';
 import catchAsync from '../utils/catchAsync';
 import { ok, created } from '../utils/response';
+
 import {
   adminCreateInstructorProfile,
   adminUpdateInstructorProfile,
@@ -13,6 +14,13 @@ import {
   instructorReplaceMyWeekly,
   instructorUpsertMyException,
   instructorDeleteMyException,
+  instructorAddWeeklyItem,
+  instructorDeleteWeeklyItem,
+  instructorUpdateWeeklyItem,
+  instructorSetDayOff,
+  instructorSetOffRange,
+  instructorAddSlotsToDay,
+  instructorRehydrateMyWeekly,
 } from '../services/instructorService';
 
 /** Instructor (self): GET /instructors/me */
@@ -56,6 +64,58 @@ export const deleteMyExceptionCtrl = catchAsync(async (req: Request, res: Respon
   return ok(res, { profile });
 });
 
+/* ========================= NEW endpoints ========================= */
+/** (1) POST /instructors/me/weekly/items */
+export const addWeeklyItemCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const body = (req.validated?.body as any) ?? req.body;
+  const profile = await instructorAddWeeklyItem(userId, body);
+  return created(res, { profile });
+});
+
+/** (2) DELETE /instructors/me/weekly/items/:itemId */
+export const deleteWeeklyItemCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const { itemId } = (req.validated?.params as any) ?? req.params;
+  const profile = await instructorDeleteWeeklyItem(userId, String(itemId));
+  return ok(res, { profile });
+});
+
+/** (3) PATCH /instructors/me/weekly/items/:itemId */
+export const updateWeeklyItemCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const { itemId } = (req.validated?.params as any) ?? req.params;
+  const body = (req.validated?.body as any) ?? req.body;
+  const profile = await instructorUpdateWeeklyItem(userId, String(itemId), body);
+  return ok(res, { profile });
+});
+
+/** (4) POST /instructors/me/exceptions/:dateYMD/off */
+export const setDayOffCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const { dateYMD } = (req.validated?.params as any) ?? req.params;
+  const profile = await instructorSetDayOff(userId, String(dateYMD));
+  return ok(res, { profile });
+});
+
+/** (6) POST /instructors/me/exceptions/off-range */
+export const setOffRangeCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const body = (req.validated?.body as any) ?? req.body;
+  const profile = await instructorSetOffRange(userId, body.from, body.to);
+  return ok(res, { profile });
+});
+
+/** (7) POST /instructors/me/exceptions/:dateYMD/slots */
+export const addSlotsToDayCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const { dateYMD } = (req.validated?.params as any) ?? req.params;
+  const body = (req.validated?.body as any) ?? req.body;
+  const profile = await instructorAddSlotsToDay(userId, String(dateYMD), body.slots);
+  return ok(res, { profile });
+});
+
+/* ========================= Admin endpoints ========================= */
 /** Admin: POST /instructors */
 export const adminCreateInstructorCtrl = catchAsync(async (req: Request, res: Response) => {
   const profile = await adminCreateInstructorProfile(req.validated?.body as any);
@@ -95,4 +155,11 @@ export const deactivateInstructorCtrl = catchAsync(async (req: Request, res: Res
   const { userId } = (req.validated?.params as { userId: string }) ?? req.params;
   const profile = await adminSetInstructorActive(String(userId), false);
   return ok(res, { profile, message: 'Deactivated' });
+});
+
+/* دالة مؤقتة لإضافة id لعناصر ال weekly القديمة */
+export const rehydrateMyWeeklyCtrl = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id?.toString()!;
+  const profile = await instructorRehydrateMyWeekly(userId);
+  return ok(res, { profile });
 });

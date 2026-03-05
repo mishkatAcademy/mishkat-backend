@@ -12,6 +12,11 @@ import {
   weeklyReplaceSchema,
   exceptionDateParamsSchema,
   upsertExceptionBodySchema,
+  weeklyItemIdParamsSchema,
+  addWeeklyItemBodySchema,
+  updateWeeklyItemBodySchema,
+  offRangeBodySchema,
+  addSlotsToDayBodySchema,
 } from '../validations/instructor.schema';
 
 import {
@@ -26,13 +31,22 @@ import {
   updateMyWeeklyCtrl,
   upsertMyExceptionCtrl,
   deleteMyExceptionCtrl,
+  addWeeklyItemCtrl,
+  deleteWeeklyItemCtrl,
+  updateWeeklyItemCtrl,
+  setDayOffCtrl,
+  setOffRangeCtrl,
+  addSlotsToDayCtrl,
+  rehydrateMyWeeklyCtrl,
 } from '../controllers/instructorController';
 
 const router = Router();
 
 /** 🧑‍🏫 مدرس: يجلب ويعدّل بروفايله */
 router.use('/me', protect);
+
 router.get('/me', getMyInstructorProfileCtrl);
+
 router.patch(
   '/me',
   validateRequestBody(selfUpdateInstructorProfileSchema),
@@ -53,6 +67,46 @@ router.delete(
   validateRequest({ params: exceptionDateParamsSchema }),
   deleteMyExceptionCtrl,
 );
+
+/* =========================================================
+✅ NEW: 7 endpoints (إضافات بدون إلغاء القديم)
+========================================================= */
+// 1) add weekly item
+router.post('/me/weekly/items', validateRequestBody(addWeeklyItemBodySchema), addWeeklyItemCtrl);
+
+// 2) delete weekly item
+router.delete(
+  '/me/weekly/items/:itemId',
+  validateRequest({ params: weeklyItemIdParamsSchema }),
+  deleteWeeklyItemCtrl,
+);
+
+// 3) update weekly item
+router.patch(
+  '/me/weekly/items/:itemId',
+  validateRequest({ params: weeklyItemIdParamsSchema, body: updateWeeklyItemBodySchema }),
+  updateWeeklyItemCtrl,
+);
+
+// 4) make day off
+router.post(
+  '/me/exceptions/:dateYMD/off',
+  validateRequest({ params: exceptionDateParamsSchema }),
+  setDayOffCtrl,
+);
+
+// 6) off range
+router.post('/me/exceptions/off-range', validateRequestBody(offRangeBodySchema), setOffRangeCtrl);
+
+// 7) add available slots to day
+router.post(
+  '/me/exceptions/:dateYMD/slots',
+  validateRequest({ params: exceptionDateParamsSchema, body: addSlotsToDayBodySchema }),
+  addSlotsToDayCtrl,
+);
+
+/* راوت مؤقت لإضافة id لعناصر ال weekly القديمة */
+router.post('/me/weekly/rehydrate', rehydrateMyWeeklyCtrl);
 
 /** 👑 Admin */
 router.use(protect, isAdmin);

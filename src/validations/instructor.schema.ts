@@ -16,27 +16,34 @@ const localizedTextRequired = z
 const localizedTextOptional = localizedTextRequired.optional();
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 export const exceptionDateParamsSchema = z.object({
   dateYMD: z.string().regex(YMD, 'Invalid date (YYYY-MM-DD)'),
 });
 
-export const dailyTimeRangeSchema = z
+const dailyTimeRangeObjectSchema = z
   .object({
     start: z.string().regex(HHMM, 'Invalid HH:mm'),
     end: z.string().regex(HHMM, 'Invalid HH:mm'),
   })
-  .refine((v) => v.start < v.end, { message: 'start must be before end' });
+  .strict();
 
-export const weeklySlotSchema = z
+export const dailyTimeRangeSchema = dailyTimeRangeObjectSchema.refine((v) => v.start < v.end, {
+  message: 'start must be before end',
+});
+
+const weeklySlotObjectSchema = z
   .object({
     day: z.number().int().min(0).max(6),
     start: z.string().regex(HHMM),
     end: z.string().regex(HHMM),
   })
-  .refine((v) => v.start < v.end, { message: 'start must be before end' });
+  .strict();
+
+export const weeklySlotSchema = weeklySlotObjectSchema.refine((v) => v.start < v.end, {
+  message: 'start must be before end',
+});
 
 /** PUT /me/exceptions/:dateYMD */
 export const upsertExceptionBodySchema = z
@@ -69,42 +76,6 @@ export const availabilityExceptionSchema = z.object({
 });
 
 const supportedTypeEnum = z.enum(['academic', 'social', 'coaching']);
-
-/** ✅ الأساس كـ ZodObject بدون effects */
-// const baseInstructorProfileSchema = z.object({
-//   userId: z.string().length(24),
-
-//   displayName: z.string().trim().max(120).optional(),
-//   bio: localizedTextSchema.optional(),
-//   academicDegree: localizedTextSchema.optional(),
-//   experiences: z
-//     .array(
-//       z.object({
-//         title: localizedTextSchema.optional(),
-//         organization: localizedTextSchema.optional(),
-//         startDate: z.coerce.date().optional(),
-//         endDate: z.coerce.date().optional(),
-//         description: localizedTextSchema.optional(),
-//       }),
-//     )
-//     .optional(),
-
-//   supportedTypes: z.array(supportedTypeEnum).min(1).optional().default(['academic']),
-//   timezone: z.string().optional().default('Asia/Riyadh'),
-
-//   bufferMinutes: z.number().int().min(0).max(180).optional().default(10),
-//   minNoticeHours: z.number().int().min(0).max(240).optional().default(24),
-//   maxAdvanceDays: z.number().int().min(1).max(365).optional().default(30),
-//   rescheduleWindowHours: z.number().int().min(0).max(240).optional().default(12),
-
-//   weekly: z.array(weeklySlotSchema).optional().default([]),
-//   exceptions: z.array(availabilityExceptionSchema).optional(),
-
-//   meetingMethod: z.enum(['manual']).optional().default('manual'),
-//   meetingUrl: z.string().url().optional(),
-
-//   isActive: z.boolean().optional().default(true),
-// });
 
 // 1) base بدون defaults
 const base = z.object({
@@ -163,8 +134,6 @@ const withRules = <T extends z.ZodTypeAny>(schema: T) =>
   });
 
 /** ✳️ إنشاء (Admin) */
-// export const createInstructorProfileSchema = withRules(baseInstructorProfileSchema);
-// 2) create: ضيف defaults هنا
 export const createInstructorProfileSchema = withRules(
   base.extend({
     supportedTypes: z.array(supportedTypeEnum).min(1).default(['academic']),
@@ -179,18 +148,10 @@ export const createInstructorProfileSchema = withRules(
   }),
 );
 
-/** ✏️ تحديث (Admin) — كل الحقول اختيارية ما عدا userId */
-// export const updateInstructorProfileSchema = withRules(
-//   baseInstructorProfileSchema.omit({ userId: true }).partial(),
-// );
-// 3) admin update: بدون defaults (partial)
+/** ✏️ تحديث (Admin) — partial */
 export const updateInstructorProfileSchema = withRules(base.omit({ userId: true }).partial());
 
-/** ✏️ تحديث (Self) — زي الأدمن بس بدون isActive */
-// export const selfUpdateInstructorProfileSchema = withRules(
-//   baseInstructorProfileSchema.omit({ userId: true, isActive: true }).partial(),
-// );
-// 4) self update: بدون isActive
+/** ✏️ تحديث (Self) — بدون isActive */
 export const selfUpdateInstructorProfileSchema = withRules(
   base.omit({ userId: true, isActive: true }).partial(),
 );
@@ -206,6 +167,64 @@ export const listInstructorsAdminQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   type: supportedTypeEnum.optional(),
   activeOnly: z.coerce.boolean().optional().default(true),
-  search: z.string().trim().optional(), // by displayName/bio/degree
+  search: z.string().trim().optional(),
   sort: z.string().optional().default('createdAt:desc'),
 });
+
+/* =========================================================
+✅ إضافات جديدة للـ 7 endpoints (لن تُلغي الموجود)
+========================================================= */
+
+export const weeklyItemIdParamsSchema = z.object({
+  itemId: z.string().length(24, 'Invalid itemId'),
+});
+
+export const addWeeklyItemBodySchema = weeklySlotObjectSchema;
+
+export const updateWeeklyItemBodySchema = z
+  .object({
+    day: z.number().int().min(0).max(6).optional(),
+    start: z.string().regex(HHMM, 'Invalid HH:mm').optional(),
+    end: z.string().regex(HHMM, 'Invalid HH:mm').optional(),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    const hasStart = typeof v.start === 'string';
+    const hasEnd = typeof v.end === 'string';
+
+    // لو واحد موجود والتاني مش موجود => غلط
+    if (hasStart !== hasEnd) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasStart ? ['end'] : ['start'],
+        message: 'start and end must be provided together',
+      });
+    }
+
+    if (hasStart && hasEnd && v.start! >= v.end!) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['end'],
+        message: 'start must be before end',
+      });
+    }
+  });
+
+/** POST /me/exceptions/off-range */
+export const offRangeBodySchema = z
+  .object({
+    from: z.string().regex(YMD, 'Invalid from'),
+    to: z.string().regex(YMD, 'Invalid to'),
+  })
+  .strict()
+  .refine((v) => v.from <= v.to, {
+    path: ['to'],
+    message: '"to" must be on/after "from"',
+  });
+
+/** POST /me/exceptions/:dateYMD/slots */
+export const addSlotsToDayBodySchema = z
+  .object({
+    slots: z.array(dailyTimeRangeSchema).min(1),
+  })
+  .strict();

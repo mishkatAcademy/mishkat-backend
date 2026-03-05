@@ -69,23 +69,17 @@ const DailyTimeRangeSchema = new Schema<DailyTimeRange>(
   { _id: false },
 );
 
-const WeeklySlotSchema = new Schema<WeeklySlot>(
-  {
-    day: { type: Number, required: true, min: 0, max: 6 },
-    start: { type: String, required: true, trim: true },
-    end: { type: String, required: true, trim: true },
-  },
-  { _id: false },
-);
+const WeeklySlotSchema = new Schema<WeeklySlot>({
+  day: { type: Number, required: true, min: 0, max: 6 },
+  start: { type: String, required: true, trim: true },
+  end: { type: String, required: true, trim: true },
+});
 
-const AvailabilityExceptionSchema = new Schema<AvailabilityException>(
-  {
-    date: { type: Date, required: true }, // normalize في الخدمة لو تحب
-    closed: { type: Boolean, default: false },
-    slots: { type: [DailyTimeRangeSchema], default: undefined },
-  },
-  { _id: false },
-);
+const AvailabilityExceptionSchema = new Schema<AvailabilityException>({
+  date: { type: Date, required: true }, // normalize في الخدمة لو تحب
+  closed: { type: Boolean, default: false },
+  slots: { type: [DailyTimeRangeSchema], default: undefined },
+});
 
 /* ========= Helpers ========= */
 
