@@ -5,7 +5,9 @@ import { ok, created } from '../utils/response';
 import {
   createBook,
   listBooks,
+  listBooksAdmin,
   getBook,
+  getBookAdmin,
   updateBook,
   softDeleteBook,
   restoreBook,
@@ -39,10 +41,23 @@ export const listBooksCtrl = catchAsync(async (req: Request, res: Response) => {
   return ok(res, { items: result.items }, result.meta);
 });
 
+// 📚 List (Admin)
+export const listBooksAdminCtrl = catchAsync(async (req: Request, res: Response) => {
+  const result = await listBooksAdmin(req.validated?.query as any);
+  return ok(res, { items: result.items }, result.meta);
+});
+
 // 📄 Get by ID
 export const getBookCtrl = catchAsync(async (req: Request, res: Response) => {
   const { id } = (req.validated?.params as { id: string }) ?? req.params;
   const book = await getBook(String(id));
+  return ok(res, { book });
+});
+
+// 📄 Get by ID (Admin)
+export const getBookAdminCtrl = catchAsync(async (req: Request, res: Response) => {
+  const { id } = (req.validated?.params as { id: string }) ?? req.params;
+  const book = await getBookAdmin(String(id));
   return ok(res, { book });
 });
 

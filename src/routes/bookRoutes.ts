@@ -3,7 +3,9 @@ import { Router } from 'express';
 import {
   createBookCtrl,
   listBooksCtrl,
+  listBooksAdminCtrl,
   getBookCtrl,
+  getBookAdminCtrl,
   updateBookCtrl,
   deleteBookCtrl,
   restoreBookCtrl,
@@ -65,11 +67,17 @@ router.get(
 // ✅ GET all books (قائمة عامة)
 router.get('/', validateQuery(bookQuerySchema), listBooksCtrl);
 
-// ✅ GET single book by ID (خليها آخر حاجة بين العموميات)
+// ✅ GET single book by ID
 router.get('/:id', validateRequest({ params: bookIdParamsSchema }), getBookCtrl);
 
 /** 🔐 Admin: create/update/delete/restore */
 router.use(protect, isAdmin);
+
+// ✅ Admin: GET all books (full details)
+router.get('/admin', validateQuery(bookQuerySchema), listBooksAdminCtrl);
+
+// ✅ GET single book by ID (Admin)
+router.get('/admin/:id', validateRequest({ params: bookIdParamsSchema }), getBookAdminCtrl);
 
 // ➕ Create (JSON only)
 router.post('/', validateRequestBody(createBookSchema), createBookCtrl);

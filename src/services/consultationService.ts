@@ -1,11 +1,13 @@
 // src/services/consultationService.ts
 import { Types } from 'mongoose';
+import type { FilterQuery } from 'mongoose';
 import { addMinutes, addDays, parseISO } from 'date-fns';
 import AppError from '../utils/AppError';
 import InstructorProfile from '../models/InstructorProfile';
 import ConsultationOffering from '../models/ConsultationOffering';
 import ConsultationHold from '../models/ConsultationHold';
 import ConsultationBooking from '../models/ConsultationBooking';
+
 import { createMoyasarPayment, MoyasarWebhookPayload } from '../utils/payments/moyasar';
 import { env } from '../config/env';
 import {
@@ -20,6 +22,8 @@ import { toHalalas, fromHalalas } from '../utils/money';
 import { createOrderForConsultationPaid } from './orderService';
 
 import type { CreateConsultationOfferingBody } from '../validations/consultation.schema';
+
+type BookingStatus = 'confirmed' | 'cancelled' | 'refunded' | 'completed';
 
 type HoldPaymentResult = {
   hold: { id: string; status: string; expiresAt: Date };
@@ -787,4 +791,122 @@ export async function rangeSlotsPublicService(
   offeringId: string,
 ) {
   return rangeSlotsService({ instructorId, from, to, offeringId });
+}
+
+function parseSort(sortStr?: string): Record<string, 1 | -1> {
+  const out: Record<string, 1 | -1> = {};
+  const s = (sortStr || '').trim();
+  if (!s) return { start: -1, createdAt: -1 };
+
+  for (const part of s.split(',')) {
+    const [field, dir] = part.split(':').map((x) => x.trim());
+    if (!field) continue;
+    out[field] = dir?.toLowerCase() === 'asc' ? 1 : -1;
+  }
+  return Object.keys(out).length ? out : { start: -1, createdAt: -1 };
+}
+
+function bookingToAdminDTO(b: any) {
+  const dto = bookingToPublicDTO(b);
+
+  const user = b.user && typeof b.user === 'object' ? b.user : null;
+  const instructor = b.instructor && typeof b.instructor === 'object' ? b.instructor : null;
+
+  return {
+    ...dto,
+    userId: b.user ? String(user?._id ?? b.user) : null,
+    instructorId: String(instructor?._id ?? b.instructor),
+
+    user: user
+      ? {
+          id: String(user._id),
+          fullName: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          isDeleted: user.isDeleted,
+        }
+      : null,
+
+    instructor: instructor
+      ? {
+          id: String(instructor._id),
+          fullName: `${instructor.firstName ?? ''} ${instructor.lastName ?? ''}`.trim(),
+          email: instructor.email,
+          avatarUrl: instructor.avatarUrl,
+          isDeleted: instructor.isDeleted,
+        }
+      : null,
+
+    // يفضل نخفي payment.raw عن الأدمن UI إلا لو محتاجه
+    payment: dto.payment
+      ? {
+          provider: dto.payment.provider,
+          paymentId: dto.payment.paymentId,
+          currency: dto.payment.currency,
+          paidAt: dto.payment.paidAt,
+        }
+      : dto.payment,
+  };
+}
+
+/** Admin: list all bookings with filters */
+export async function adminListConsultationBookingsService(params: {
+  page?: number;
+  limit?: number;
+  instructorId?: string;
+  userId?: string;
+  type?: 'academic' | 'social' | 'coaching';
+  status?: BookingStatus;
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD
+  sort?: string;
+}) {
+  const page = Math.max(1, params.page || 1);
+  const limit = Math.min(100, Math.max(1, params.limit || 10));
+  const skip = (page - 1) * limit;
+
+  const q: FilterQuery<any> = {};
+
+  if (params.instructorId) q.instructor = params.instructorId;
+  if (params.userId) q.user = params.userId;
+  if (params.type) q['offering.type'] = params.type;
+  if (params.status) q.status = params.status;
+
+  // فلترة على start (UTC)
+  if (params.from || params.to) {
+    q.start = {};
+    if (params.from) q.start.$gte = new Date(`${params.from}T00:00:00.000Z`);
+    if (params.to) q.start.$lte = new Date(`${params.to}T23:59:59.999Z`);
+  }
+
+  const sort = parseSort(params.sort);
+
+  const [items, total] = await Promise.all([
+    ConsultationBooking.find(q)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate({ path: 'user', select: 'firstName lastName email avatarUrl isDeleted' })
+      .populate({ path: 'instructor', select: 'firstName lastName email avatarUrl isDeleted' })
+      .lean(),
+    ConsultationBooking.countDocuments(q),
+  ]);
+
+  const pages = Math.max(1, Math.ceil(total / limit));
+  return {
+    items: items.map(bookingToAdminDTO),
+    meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
+  };
+}
+
+/** Admin: get booking by id */
+export async function adminGetConsultationBookingByIdService(id: string) {
+  const b = await ConsultationBooking.findById(id)
+    .populate({ path: 'user', select: 'firstName lastName email avatarUrl isDeleted' })
+    .populate({ path: 'instructor', select: 'firstName lastName email avatarUrl isDeleted' })
+    .lean();
+
+  if (!b) throw AppError.notFound('Booking not found');
+
+  return bookingToAdminDTO(b);
 }

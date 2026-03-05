@@ -4,6 +4,15 @@ import { protect, isAdmin } from '../middlewares/authMiddleware';
 import { validateRequest, validateRequestBody, validateQuery } from '../middlewares/validate';
 
 import {
+  instructorMyConsultationsQuerySchema,
+  myOfferingsQuerySchema,
+} from '../validations/instructorConsultations.schema';
+import {
+  listMyInstructorConsultationsCtrl,
+  listMySupportedOfferingsCtrl,
+} from '../controllers/instructorDashboardController';
+
+import {
   createInstructorProfileSchema,
   updateInstructorProfileSchema,
   selfUpdateInstructorProfileSchema,
@@ -105,8 +114,17 @@ router.post(
   addSlotsToDayCtrl,
 );
 
+// ...
+router.get(
+  '/me/consultations',
+  validateQuery(instructorMyConsultationsQuerySchema),
+  listMyInstructorConsultationsCtrl,
+);
+
+router.get('/me/offerings', validateQuery(myOfferingsQuerySchema), listMySupportedOfferingsCtrl);
+
 /* راوت مؤقت لإضافة id لعناصر ال weekly القديمة */
-router.post('/me/weekly/rehydrate', rehydrateMyWeeklyCtrl);
+// router.post('/me/weekly/rehydrate', rehydrateMyWeeklyCtrl);
 
 /** 👑 Admin */
 router.use(protect, isAdmin);

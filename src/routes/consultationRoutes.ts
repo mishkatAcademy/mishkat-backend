@@ -18,8 +18,12 @@ import {
   cancelConsultationCtrl,
   calendarOverlayCtrl,
 } from '../controllers/consultationController';
+import {
+  adminListBookingsCtrl,
+  adminGetBookingCtrl,
+} from '../controllers/consultationAdminController';
 
-import { protect } from '../middlewares/authMiddleware';
+import { protect, isAdmin } from '../middlewares/authMiddleware';
 import { validateRequest, validateQuery, validateRequestBody } from '../middlewares/validate';
 
 import {
@@ -33,10 +37,10 @@ import {
   idParamSchema,
   rescheduleBodySchema,
   calendarQuerySchema,
+  adminListBookingsQuerySchema,
+  adminBookingIdParamSchema,
+  createConsultationOfferingBodySchema,
 } from '../validations/consultation.schema';
-
-import { isAdmin } from '../middlewares/authMiddleware';
-import { createConsultationOfferingBodySchema } from '../validations/consultation.schema';
 
 const instructorIdParamsSchema = z.object({
   instructorId: z.string().length(24, 'Invalid instructorId'),
@@ -114,5 +118,22 @@ router.post(
 );
 
 router.post('/me/:id/cancel', validateRequest({ params: idParamSchema }), cancelConsultationCtrl);
+
+/** 👑 Admin bookings (list + details) */
+router.get(
+  '/admin/bookings',
+  protect,
+  isAdmin,
+  validateQuery(adminListBookingsQuerySchema),
+  adminListBookingsCtrl,
+);
+
+router.get(
+  '/admin/bookings/:id',
+  protect,
+  isAdmin,
+  validateRequest({ params: adminBookingIdParamSchema }),
+  adminGetBookingCtrl,
+);
 
 export default router;

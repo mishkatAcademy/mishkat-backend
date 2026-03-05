@@ -162,6 +162,71 @@ export const rescheduleBodySchema = z
   })
   .strict();
 
+// ===================== Admin Bookings =====================
+
+export const bookingStatusEnum = z.enum(['confirmed', 'cancelled', 'refunded', 'completed']);
+
+const adminSortAllowed = new Set(['start', 'createdAt', 'status']);
+
+function safeSortString(sort?: string) {
+  const s = (sort || '').trim();
+  if (!s) return 'start:desc,createdAt:desc';
+
+  // whitelist fields to avoid weird sorts
+  const parts = s
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const kept: string[] = [];
+
+  for (const part of parts) {
+    const [fieldRaw, dirRaw] = part.split(':').map((x) => x.trim());
+    const field = fieldRaw || '';
+    const dir = (dirRaw || 'desc').toLowerCase();
+    if (!adminSortAllowed.has(field)) continue;
+    kept.push(`${field}:${dir === 'asc' ? 'asc' : 'desc'}`);
+  }
+
+  return kept.length ? kept.join(',') : 'start:desc,createdAt:desc';
+}
+
+/** GET /consultations/admin/bookings */
+export const adminListBookingsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+
+    instructorId: objectId.optional(), // User._id
+    userId: objectId.optional(), // الطالب (User._id) - ممكن null في booking لكن الفلتر هنا لو عايزه
+    type: consultationTypeEnum.optional(), // offering.type snapshot
+    status: bookingStatusEnum.optional(),
+
+    // فلترة على start (UTC) باستخدام YMD
+    from: z.string().regex(YMD, 'Invalid from (YYYY-MM-DD)').optional(),
+    to: z.string().regex(YMD, 'Invalid to (YYYY-MM-DD)').optional(),
+
+    sort: z
+      .string()
+      .optional()
+      .transform((v) => safeSortString(v)),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    if (v.from && v.to && v.from > v.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message: '"to" must be on/after "from"',
+      });
+    }
+  });
+
+/** GET /consultations/admin/bookings/:id */
+export const adminBookingIdParamSchema = z.object({ id: objectId }).strict();
+
+export type AdminListBookingsQuery = z.infer<typeof adminListBookingsQuerySchema>;
+export type AdminBookingIdParam = z.infer<typeof adminBookingIdParamSchema>;
+
 /* ========== Types ==========
  * مفيدة في السيرفس/الكونترولر
  * ====================================== */

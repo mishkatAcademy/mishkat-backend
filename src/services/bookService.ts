@@ -291,12 +291,69 @@ export async function listBooks(input: ListBooksInput) {
   };
 }
 
+/** قائمة الكتب (الأدمن) */
+export async function listBooksAdmin(input: ListBooksInput) {
+  const page = Math.max(1, input.page || 1);
+  const limit = Math.min(100, Math.max(1, input.limit || 10));
+  const skip = (page - 1) * limit;
+
+  // ✅ للأدمن: لو includeDeleted=true -> يرجّع المحذوف كمان
+  const q = buildBooksQuery({ ...input, includeDeleted: !!input.includeDeleted });
+  const sort = parseSort(input.sort);
+
+  const [items, total] = await Promise.all([
+    Book.find(q).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }),
+    Book.countDocuments(q),
+  ]);
+
+  const pages = Math.max(1, Math.ceil(total / limit));
+
+  const adminItems = items.map((b: any) => ({
+    ...b,
+
+    // ✅ SAR friendly
+    price: fromHalalas(b.priceHalallas),
+    salesPrice: typeof b.salesPriceHalallas === 'number' ? fromHalalas(b.salesPriceHalallas) : null,
+
+    // ✅ relPaths للأدمن فقط
+    imageRelPath: b.imageRelPath,
+    pdfRelPath: b.pdfRelPath,
+  }));
+
+  return {
+    items: adminItems,
+    meta: { total, page, limit, pages, hasNextPage: page < pages, hasPrevPage: page > 1 },
+  };
+}
+
 /** جلب كتاب */
 export async function getBook(id: string) {
   const doc = await Book.findById(id).lean({ virtuals: true });
   if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
   // return doc;
   return bookToPublicDTO(doc);
+}
+
+/** جلب كتاب (الأدمن) */
+export async function getBookAdmin(id: string) {
+  const doc = await Book.findById(id).lean({ virtuals: true });
+  if (!doc) throw AppError.notFound('الكتاب غير موجود');
+
+  // Admin DTO: رجّع relPaths كمان
+  return {
+    ...doc,
+
+    // أسعار SAR (زي public)
+    price: fromHalalas((doc as any).priceHalallas),
+    salesPrice:
+      typeof (doc as any).salesPriceHalallas === 'number'
+        ? fromHalalas((doc as any).salesPriceHalallas)
+        : null,
+
+    // ✅ relPaths للأدمن فقط (حتى لو schema.toJSON بيشيلها)
+    imageRelPath: (doc as any).imageRelPath,
+    pdfRelPath: (doc as any).pdfRelPath,
+  };
 }
 
 /** تحديث كتاب (روابط فقط) */
