@@ -2,6 +2,8 @@
 import type { Request, Response, Express } from 'express';
 import catchAsync from '../utils/catchAsync';
 import { ok, created } from '../utils/response';
+import { AppError } from '../utils/AppError';
+
 import {
   createBook,
   listBooks,
@@ -17,6 +19,39 @@ import {
   updateBookWithUploads,
 } from '../services/bookService';
 
+function parseJSONField<T>(raw: any, fieldName: string): T | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'object') return raw as T;
+  if (typeof raw !== 'string') return undefined;
+
+  const s = raw.trim();
+  if (!s) return undefined;
+
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    throw AppError.badRequest(`حقل ${fieldName} يجب أن يكون JSON صالح`);
+  }
+}
+
+function parseBool(raw: any): boolean | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw !== 'string') return undefined;
+  const s = raw.trim().toLowerCase();
+  if (s === 'true' || s === '1') return true;
+  if (s === 'false' || s === '0') return false;
+  return undefined;
+}
+
+function parseNumber(raw: any): number | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw !== 'string') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 // ✅ Create (JSON)
 export const createBookCtrl = catchAsync(async (req: Request, res: Response) => {
   const book = await createBook(req.validated?.body as any);
@@ -24,14 +59,64 @@ export const createBookCtrl = catchAsync(async (req: Request, res: Response) => 
 });
 
 // ✅ Create (multipart: cover/pdf)
+// export const createBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
+//   const body = (req.body ?? {}) as any;
+//   const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
+//   const files = {
+//     cover: filesMap.cover?.[0],
+//     pdf: filesMap.pdf?.[0],
+//   };
+//   const book = await createBookWithUploads(body, files);
+//   return created(res, { book });
+// });
+
 export const createBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
-  const body = (req.body ?? {}) as any;
-  const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
-  const files = {
-    cover: filesMap.cover?.[0],
-    pdf: filesMap.pdf?.[0],
+  const raw = (req.body ?? {}) as any;
+
+  // ✅ parse JSON fields
+  const title = parseJSONField<{ ar?: string; en?: string }>(raw.title, 'title');
+  const description = parseJSONField<{ ar?: string; en?: string }>(raw.description, 'description');
+  const author = parseJSONField<{ ar?: string; en?: string }>(raw.author, 'author');
+  const publisher = parseJSONField<{ ar?: string; en?: string }>(raw.publisher, 'publisher');
+
+  // ✅ categories as JSON array
+  const categories = parseJSONField<string[]>(raw.categories, 'categories');
+
+  // ✅ coerce primitives (form-data => string)
+  const body = {
+    ...raw,
+    title,
+    description,
+    author,
+    publisher,
+    categories,
+
+    language: raw.language,
+    price: parseNumber(raw.price),
+    salesPrice: raw.salesPrice === '' ? undefined : parseNumber(raw.salesPrice),
+    isDigital: parseBool(raw.isDigital),
+    showInHomepage: parseBool(raw.showInHomepage),
+
+    pages: parseNumber(raw.pages),
+    stock: raw.stock === '' ? undefined : parseNumber(raw.stock),
+
+    // تاريخ: لو جالك ISO string هنسيبه string والـ service/model يحوله Date؟ الأفضل نحوله هنا:
+    publishDate: raw.publishDate ? new Date(raw.publishDate) : undefined,
+
+    isbn: raw.isbn,
+    pdfUrl: raw.pdfUrl, // لو حابب تدعم رابط بدل الملف
+    image: raw.image,
   };
-  const book = await createBookWithUploads(body, files);
+
+  // ✅ basic required guards (اختياري لكنه مفيد)
+  if (!body.title) throw AppError.badRequest('title مطلوب');
+  if (!body.author) throw AppError.badRequest('author مطلوب');
+  if (typeof body.price !== 'number') throw AppError.badRequest('price مطلوب ويجب أن يكون رقمًا');
+
+  const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
+  const files = { cover: filesMap.cover?.[0], pdf: filesMap.pdf?.[0] };
+
+  const book = await createBookWithUploads(body as any, files);
   return created(res, { book });
 });
 
@@ -70,17 +155,55 @@ export const updateBookCtrl = catchAsync(async (req: Request, res: Response) => 
 });
 
 // ✏️ Update (multipart: cover/pdf)
+// export const updateBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
+//   const { id } = (req.validated?.params as { id: string }) ?? req.params;
+//   const body = (req.body ?? {}) as any;
+//   const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
+
+//   const files = {
+//     cover: filesMap.cover?.[0],
+//     pdf: filesMap.pdf?.[0],
+//   };
+
+//   const book = await updateBookWithUploads(String(id), body, files);
+//   return ok(res, { book });
+// });
 export const updateBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
   const { id } = (req.validated?.params as { id: string }) ?? req.params;
-  const body = (req.body ?? {}) as any;
-  const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
+  const raw = (req.body ?? {}) as any;
 
+  // ✅ parse JSON fields (كلهم اختياري في update)
+  const body = {
+    ...raw,
+    title: parseJSONField<{ ar?: string; en?: string }>(raw.title, 'title'),
+    description: parseJSONField<{ ar?: string; en?: string }>(raw.description, 'description'),
+    author: parseJSONField<{ ar?: string; en?: string }>(raw.author, 'author'),
+    publisher: parseJSONField<{ ar?: string; en?: string }>(raw.publisher, 'publisher'),
+    categories: parseJSONField<string[]>(raw.categories, 'categories'),
+
+    // ✅ coerce primitives
+    price: parseNumber(raw.price),
+    salesPrice:
+      raw.salesPrice === ''
+        ? null
+        : raw.salesPrice != null
+          ? parseNumber(raw.salesPrice)
+          : undefined,
+    isDigital: parseBool(raw.isDigital),
+    showInHomepage: parseBool(raw.showInHomepage),
+    pages: parseNumber(raw.pages),
+    stock: raw.stock === '' ? null : raw.stock != null ? parseNumber(raw.stock) : undefined,
+
+    publishDate: raw.publishDate ? new Date(raw.publishDate) : undefined,
+  };
+
+  const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
   const files = {
     cover: filesMap.cover?.[0],
     pdf: filesMap.pdf?.[0],
   };
 
-  const book = await updateBookWithUploads(String(id), body, files);
+  const book = await updateBookWithUploads(String(id), body as any, files);
   return ok(res, { book });
 });
 

@@ -165,17 +165,15 @@ export const bookQuerySchema = z.object({
   includeDeleted: z.coerce.boolean().optional().default(false),
 
   search: z.string().trim().optional(),
-  categories: z.string().trim().optional(), // CSV: "id1,id2,.."
+  category: objectId.optional(),
   language: z.enum(['ar', 'en']).optional(),
   isDigital: z.coerce.boolean().optional(),
   inStock: z.coerce.boolean().optional(),
   showInHomepage: z.coerce.boolean().optional(),
 
-  // دول بيجوا سترنج في الكويري – نكوّرْسهم
   minPrice: z.coerce.number().nonnegative().optional(),
   maxPrice: z.coerce.number().nonnegative().optional(),
 
-  // مثال: "createdAt:desc" | "price:asc"
   sort: z.string().optional().default('createdAt:desc'),
 });
 

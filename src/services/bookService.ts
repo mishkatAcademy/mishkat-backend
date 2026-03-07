@@ -41,7 +41,7 @@ type ListBooksInput = {
   limit?: number;
   includeDeleted?: boolean;
   search?: string;
-  categories?: string; // CSV
+  category?: string;
   language?: 'ar' | 'en';
   isDigital?: boolean;
   inStock?: boolean;
@@ -86,7 +86,7 @@ function buildBooksQuery(input: {
   showInHomepage?: boolean;
   minPrice?: number;
   maxPrice?: number;
-  categories?: string;
+  category?: string;
   search?: string;
 }) {
   const base: any = {};
@@ -97,6 +97,10 @@ function buildBooksQuery(input: {
   if (input.language) base.language = input.language;
   if (typeof input.isDigital === 'boolean') base.isDigital = input.isDigital;
   if (typeof input.showInHomepage === 'boolean') base.showInHomepage = input.showInHomepage;
+
+  if (input.category && /^[a-fA-F0-9]{24}$/.test(input.category)) {
+    base.categories = input.category;
+  }
 
   // ✅ فلترة السعر على السعر الفعّال: salesPriceHalallas إن وُجد، وإلا priceHalallas
   if (typeof input.minPrice === 'number' || typeof input.maxPrice === 'number') {
@@ -113,8 +117,8 @@ function buildBooksQuery(input: {
     if (conds.length) and.push({ $expr: { $and: conds } });
   }
 
-  const categoryIds = parseCategoriesCSV(input.categories);
-  if (categoryIds?.length) base.categories = { $in: categoryIds };
+  // const categoryId = parseCategoriesCSV(input.category);
+  // if (categoryIds?.length) base.categories = { $in: categoryIds };
 
   if (input.inStock === true) {
     and.push({ $or: [{ isDigital: true }, { isDigital: false, stock: { $gt: 0 } }] });
@@ -234,6 +238,9 @@ export async function createBookWithUploads(
     } else {
       throw AppError.badRequest('ملف PDF أو رابط PDF مطلوب للكتاب الرقمي');
     }
+  } else {
+    pdfUrl = undefined;
+    pdfRelPath = undefined;
   }
 
   const stock = isDigital ? null : typeof data.stock === 'number' ? data.stock : 0;
@@ -568,46 +575,45 @@ export async function getHomepageBooks(input: {
 }
 
 /** الكتب + التصنيفات غير الفارغة */
-export async function getBooksWithCategories(input: ListBooksInput) {
+export async function getBooksWithCategories(input: ListBooksInput & { category?: string }) {
   const page = Math.max(1, input.page || 1);
   const limit = Math.min(100, Math.max(1, input.limit || 10));
   const skip = (page - 1) * limit;
 
+  // ✅ query للكتب (قد يحتوي category)
   const q = buildBooksQuery(input);
   const sort = parseSort(input.sort);
+
+  // ✅ query للتصنيفات "العامة" بدون category
+  const qAllBooksForCats = buildBooksQuery({ ...input, category: undefined });
 
   // 1) books + total (زي ما عندك)
   const [items, total, categories] = await Promise.all([
     Book.find(q).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }),
     Book.countDocuments(q),
 
-    // 2) ✅ Categories filtered by SAME query (مع count لكل تصنيف)
+    // ✅ Categories that have books (general)
     Book.aggregate([
-      { $match: q },
+      { $match: qAllBooksForCats },
       { $unwind: '$categories' },
       { $group: { _id: '$categories', booksCount: { $sum: 1 } } },
       {
         $lookup: {
-          from: Category.collection.name, // غالباً "categories"
+          from: Category.collection.name,
           localField: '_id',
           foreignField: '_id',
           as: 'cat',
         },
       },
       { $unwind: '$cat' },
-
-      // ✅ فلترة الـ Category نفسها
       {
         $match: {
           'cat.isDeleted': false,
           'cat.scopes': { $in: ['book'] },
         },
       },
-
-      // ✅ رتب التصنيفات زي ما بتحب
       { $sort: { 'cat.order': 1, 'cat.createdAt': -1 } },
 
-      // ✅ رجّع شكل نظيف للفرونت
       {
         $project: {
           _id: 0,
@@ -620,9 +626,7 @@ export async function getBooksWithCategories(input: ListBooksInput) {
           order: '$cat.order',
           createdAt: '$cat.createdAt',
           updatedAt: '$cat.updatedAt',
-
-          // count حسب الفلاتر الحالية
-          booksCountFiltered: '$booksCount',
+          booksCount: '$booksCount', // count عام حسب فلاتر العامة
         },
       },
     ]),
