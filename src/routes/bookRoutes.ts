@@ -5,6 +5,7 @@ import {
   listBooksCtrl,
   listBooksAdminCtrl,
   getBookCtrl,
+  getBookBySlugCtrl,
   getBookAdminCtrl,
   updateBookCtrl,
   deleteBookCtrl,
@@ -66,6 +67,9 @@ router.get(
 
 // ✅ GET all books (قائمة عامة)
 router.get('/', validateQuery(bookQuerySchema), listBooksCtrl);
+
+// ✅ GET single book by SLUG
+router.get('/slug/:slug', getBookBySlugCtrl);
 
 // ✅ GET single book by ID
 router.get('/:id', validateRequest({ params: bookIdParamsSchema }), getBookCtrl);

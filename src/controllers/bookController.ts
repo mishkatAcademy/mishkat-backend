@@ -9,6 +9,7 @@ import {
   listBooks,
   listBooksAdmin,
   getBook,
+  getBookBySlug,
   getBookAdmin,
   updateBook,
   softDeleteBook,
@@ -135,8 +136,15 @@ export const listBooksAdminCtrl = catchAsync(async (req: Request, res: Response)
 // 📄 Get by ID
 export const getBookCtrl = catchAsync(async (req: Request, res: Response) => {
   const { id } = (req.validated?.params as { id: string }) ?? req.params;
-  const book = await getBook(String(id));
-  return ok(res, { book });
+  const result = await getBook(String(id));
+  return ok(res, result);
+});
+
+// 📄 Get by SLUG
+export const getBookBySlugCtrl = catchAsync(async (req: Request, res: Response) => {
+  const { slug } = (req.validated?.params as { slug: string }) ?? req.params;
+  const result = await getBookBySlug(String(slug));
+  return ok(res, result);
 });
 
 // 📄 Get by ID (Admin)

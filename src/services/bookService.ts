@@ -146,10 +146,78 @@ function buildBooksQuery(input: {
 
 function bookToPublicDTO(b: any) {
   return {
-    ...b,
+    id: b.id ?? String(b._id),
+    title: b.title,
+    slug: b.slug,
+    description: b.description,
+    author: b.author,
+    publisher: b.publisher,
+    language: b.language,
+
+    image: b.image,
+
+    // ✅ أسعار فقط بالريال
     price: fromHalalas(b.priceHalallas),
     salesPrice: typeof b.salesPriceHalallas === 'number' ? fromHalalas(b.salesPriceHalallas) : null,
+
+    isDigital: b.isDigital,
+
+    // ❌ لا ترجع pdfUrl للـ public (مهم جدًا)
+    // pdfUrl: b.pdfUrl,
+
+    categories: (b.categories || []).map((x: any) => String(x)),
+
+    showInHomepage: !!b.showInHomepage,
+
+    avgRating: b.avgRating,
+    ratingsCount: b.ratingsCount,
+
+    pages: b.pages,
+    publishDate: b.publishDate,
+    isbn: b.isbn,
+
+    // ✅ public helpful virtuals (لو موجودة من lean({virtuals:true}))
+    isOnSale: b.isOnSale,
+    isInStock: b.isInStock,
+    effectivePriceSAR: b.effectivePriceSAR,
   };
+}
+
+async function getRelatedBooks(opts: { bookId: string; categoryId?: string; limit?: number }) {
+  const limit = Math.min(20, Math.max(1, opts.limit ?? 8));
+  const excludeIds = [opts.bookId];
+
+  const picked: any[] = [];
+
+  // 1) نفس التصنيف (لو موجود)
+  if (opts.categoryId && /^[a-fA-F0-9]{24}$/.test(opts.categoryId)) {
+    const sameCat = await Book.find({
+      isDeleted: false,
+      _id: { $ne: opts.bookId },
+      categories: opts.categoryId, // array contains
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean({ virtuals: true });
+
+    picked.push(...sameCat);
+    excludeIds.push(...sameCat.map((b) => String(b._id)));
+  }
+
+  // 2) تكملة بكتب عامة
+  if (picked.length < limit) {
+    const rest = await Book.find({
+      isDeleted: false,
+      _id: { $nin: excludeIds },
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit - picked.length)
+      .lean({ virtuals: true });
+
+    picked.push(...rest);
+  }
+
+  return picked.map(bookToPublicDTO);
 }
 
 /* ------------ Core Services (روابط فقط) ------------ */
@@ -334,11 +402,43 @@ export async function listBooksAdmin(input: ListBooksInput) {
 }
 
 /** جلب كتاب */
+// by ID
 export async function getBook(id: string) {
   const doc = await Book.findById(id).lean({ virtuals: true });
   if (!doc || doc.isDeleted) throw AppError.notFound('الكتاب غير موجود');
+
+  const categoryId =
+    Array.isArray(doc.categories) && doc.categories.length ? String(doc.categories[0]) : undefined;
+
+  const relatedBooks = await getRelatedBooks({
+    bookId: String(doc._id),
+    categoryId,
+    limit: 8,
+  });
+
   // return doc;
-  return bookToPublicDTO(doc);
+  return { book: bookToPublicDTO(doc), relatedBooks };
+}
+
+// by SLUG
+export async function getBookBySlug(bookSlug: string) {
+  const slug = String(bookSlug || '')
+    .trim()
+    .toLowerCase();
+  const doc = await Book.findOne({ slug: slug, isDeleted: false }).lean({ virtuals: true });
+  if (!doc) throw AppError.notFound('الكتاب غير موجود');
+
+  const categoryId =
+    Array.isArray(doc.categories) && doc.categories.length ? String(doc.categories[0]) : undefined;
+
+  const relatedBooks = await getRelatedBooks({
+    bookId: String(doc._id),
+    categoryId,
+    limit: 8,
+  });
+
+  // return doc;
+  return { book: bookToPublicDTO(doc), relatedBooks };
 }
 
 /** جلب كتاب (الأدمن) */
