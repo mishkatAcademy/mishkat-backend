@@ -215,13 +215,24 @@ const BookSchema = new Schema<IBook>(
       virtuals: true,
       transform(_doc, ret) {
         // لا تُرجع المسارات الداخلية للعميل
+        ret.id = String(ret._id);
+        delete ret._id;
         delete ret.imageRelPath;
         delete ret.pdfRelPath;
         return ret;
       },
     },
-    toObject: { virtuals: true },
-    // versionKey: false, // لو حابب تلغي __v
+    toObject: {
+      virtuals: true,
+      transform(_doc, ret) {
+        ret.id = String(ret._id);
+        delete ret._id;
+        delete ret.imageRelPath;
+        delete ret.pdfRelPath;
+        return ret;
+      },
+    },
+    versionKey: false, // لو حابب تلغي __v
   },
 );
 
