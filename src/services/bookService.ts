@@ -664,8 +664,8 @@ export async function getHomepageBooks(input: {
 
   const q: any = { isDeleted: false, showInHomepage: true };
   if (input.language) q.language = input.language;
-  if (typeof input.isDigital === 'boolean' || typeof input.isDigital === 'string')
-    q.isDigital = Boolean(input.isDigital);
+  if (typeof input.isDigital === 'boolean') q.isDigital = input.isDigital;
+  if (typeof input.isDigital === 'string') q.isDigital = Boolean(input.isDigital);
   if (input.inStock === true) {
     q.$or = [{ isDigital: true }, { isDigital: false, stock: { $gt: 0 } }];
     // هنا مش محتاج AND لأنّك أصلاً مثبت showInHomepage=true
