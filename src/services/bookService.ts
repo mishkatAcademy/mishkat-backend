@@ -184,7 +184,7 @@ function bookToPublicDTO(b: any) {
 }
 
 async function getRelatedBooks(opts: { bookId: string; categoryId?: string; limit?: number }) {
-  const limit = Math.min(20, Math.max(1, opts.limit ?? 8));
+  const limit = Math.min(20, Math.max(1, opts.limit ?? 4));
   const excludeIds = [opts.bookId];
 
   const picked: any[] = [];
@@ -413,7 +413,7 @@ export async function getBook(id: string) {
   const relatedBooks = await getRelatedBooks({
     bookId: String(doc._id),
     categoryId,
-    limit: 8,
+    limit: 4,
   });
 
   // return doc;
@@ -434,7 +434,7 @@ export async function getBookBySlug(bookSlug: string) {
   const relatedBooks = await getRelatedBooks({
     bookId: String(doc._id),
     categoryId,
-    limit: 8,
+    limit: 4,
   });
 
   // return doc;
