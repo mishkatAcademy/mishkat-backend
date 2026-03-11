@@ -123,7 +123,7 @@ export async function listInstructorsService(opts: {
   const q: any = {};
   if (activeOnly) q.isActive = true;
   if (type) q.supportedTypes = type;
-  return InstructorProfile.find(q).lean();
+  return InstructorProfile.find(q).populate('user', 'avatarUrl').lean();
 }
 
 export async function getPublicInstructorByUserIdService(

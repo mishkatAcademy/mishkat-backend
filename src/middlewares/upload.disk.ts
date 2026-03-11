@@ -33,7 +33,7 @@ export interface FieldRule {
 
 export interface UploaderConfig {
   fields: FieldRule[];
-  globalMaxFiles?: number;  // حد عام لعدد الملفات في الـ request
+  globalMaxFiles?: number; // حد عام لعدد الملفات في الـ request
   globalMaxSizeMB?: number; // حد عام لحجم الملف الواحد عند مستوى Multer
 }
 

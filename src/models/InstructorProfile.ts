@@ -167,7 +167,7 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
       virtuals: true,
       versionKey: false,
       transform(_doc, ret) {
-        // ret.id = String(ret._id);
+        ret.id = String(ret.user);
         delete ret._id;
       },
     },
@@ -175,7 +175,7 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
       virtuals: true,
       versionKey: false,
       transform(_doc, ret) {
-        // ret.id = String(ret._id);
+        ret.id = String(ret.user);
         delete ret._id;
       },
     },
@@ -243,6 +243,13 @@ InstructorProfileSchema.pre('validate', async function (next) {
   } catch (err) {
     next(err as any);
   }
+});
+
+InstructorProfileSchema.virtual('image').get(function (this: IInstructorProfile) {
+  if (this.user && (this.user as any).avatarUrl) {
+    return (this.user as any).avatarUrl;
+  }
+  return null;
 });
 
 /* ========= Useful Indexes ========= */
