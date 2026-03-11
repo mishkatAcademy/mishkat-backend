@@ -167,7 +167,7 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
       virtuals: true,
       versionKey: false,
       transform(_doc, ret) {
-        ret.id = String(ret._id);
+        // ret.id = String(ret._id);
         delete ret._id;
       },
     },
@@ -175,7 +175,7 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
       virtuals: true,
       versionKey: false,
       transform(_doc, ret) {
-        ret.id = String(ret._id);
+        // ret.id = String(ret._id);
         delete ret._id;
       },
     },
