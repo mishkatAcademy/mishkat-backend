@@ -35,7 +35,6 @@ export const createCategoryCtrl = catchAsync(async (req: Request, res: Response)
 export const listCategoriesCtrl = catchAsync(async (req: Request, res: Response) => {
   const query = (req.validated?.query as ListQuery) ?? (req.query as any);
   const result = await listCategories(query);
-  // ملاحظة: ok(res, result.items, result.meta) متّسق مع اللي بتعمله في الكتب
   return ok(res, result.items, result.meta);
 });
 
@@ -62,8 +61,6 @@ export const deleteCategoryCtrl = catchAsync(async (req: Request, res: Response)
   await softDeleteCategory(String(id));
   // خيار 1: 200 + body
   return ok(res, { deleted: true });
-  // خيار 2: 204 بدون Body
-  // return noContent(res);
 });
 
 /** ♻️ استرجاع تصنيف محذوف */

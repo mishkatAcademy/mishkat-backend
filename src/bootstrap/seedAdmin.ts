@@ -28,10 +28,10 @@ export async function seedAdminUser() {
       $set.lastName = lastName;
     }
 
-    // ✅ تحديث verify عند الطلب (اختياري—سيبها زي ما تحب)
+    // ✅ تحديث verify عند الطلب
     if (verify) $set.isEmailVerified = true;
 
-    // ✅ ترقية/استعادة زي ما عندك
+    // ✅ ترقية/استعادة
     if (existing.isDeleted) $set.isDeleted = false;
     if (existing.role !== 'admin') $set.role = 'admin';
 
@@ -55,7 +55,7 @@ export async function seedAdminUser() {
     return;
   }
 
-  // إنشاء جديد (مهم: سيب تشفير الباسورد للـ pre("save") في UserSchema)
+  // إنشاء جديد
   await User.create({
     firstName,
     lastName,

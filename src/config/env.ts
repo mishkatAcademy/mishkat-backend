@@ -4,21 +4,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-/**
- * ملاحظة:
- * - الاتصال بـ Mongo يتم من خلال متغير واحد موحّد:
- *   MONGODB_URI
- *   مثال محلي:
- *   mongodb://127.0.0.1:27017/mishkat?directConnection=true
- * - أضفنا APP_BASE_URL (لازم لروابط /uploads).
- */
-
-/**
- * ✅ تعريف الـ schema بكل المتغيّرات
- * - استخدمنا z.coerce.number() للأرقام كي نقبل strings من .env
- * - ACCESS/REFRESH_TOKEN_EXPIRES_IN بصيغة "15m" أو "7d" (Regex بسيط)
- * - أضفنا مفاتيح الاستشارات: HOLD_TTL/MIN_NOTICE/MAX_ADVANCE/BUFFER/CANCEL_WINDOW
- */
 const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
@@ -41,7 +26,6 @@ const baseSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be ≥ 32 chars'),
   REFRESH_TOKEN_SECRET: z.string().min(64, 'REFRESH_TOKEN_SECRET must be ≥ 64 chars'),
 
-  // بصيغة مثل: "15m", "7d", "3600s"
   ACCESS_TOKEN_EXPIRES_IN: z
     .string()
     .regex(/^\d+[smhd]$/i)
@@ -51,7 +35,6 @@ const baseSchema = z.object({
     .regex(/^\d+[smhd]$/i)
     .default('7d'),
 
-  // CORS: إمّا "*" أو قائمة مفصولة بفواصل
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
   COOKIE_SECURE: z
@@ -77,14 +60,12 @@ const baseSchema = z.object({
   WEBHOOK_SECRET: z.string().optional(),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  JSON_BODY_LIMIT: z.string().default('2mb'), // متوافق مع .env عندك
+  JSON_BODY_LIMIT: z.string().default('2mb'),
 
   // 🛒 الأوردر/المتجر
   VAT_PERCENT: z.coerce.number().min(0).max(100).default(15),
   SHIPPING_FLAT_HALALAS: z.coerce.number().int().min(0).default(0),
 
-  // REDIS (اختياري)
-  // يقبل عدم التعيين أو قيمة فارغة، ويتأكد لو موجودة تبدأ بـ redis:// أو rediss://
   REDIS_URL: z
     .string()
     .optional()
@@ -97,7 +78,7 @@ const baseSchema = z.object({
   // 📎 الرفع
   UPLOAD_MAX_MB: z.coerce.number().positive().default(10),
 
-  // 🧑‍⚕️ الاستشارات (القيم الافتراضية مناقشة سابقة)
+  // 🧑‍⚕️ الاستشارات (القيم الافتراضية)
   CONSULTATION_HOLD_TTL_MINUTES: z.coerce.number().int().min(1).max(120).default(15),
   CONSULTATION_MIN_NOTICE_HOURS: z.coerce.number().int().min(0).max(240).default(24),
   CONSULTATION_MAX_ADVANCE_DAYS: z.coerce.number().int().min(1).max(365).default(30),
@@ -109,7 +90,7 @@ const baseSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email('RESEND_FROM_EMAIL must be a valid email'),
   RESEND_FROM_NAME: z.string().min(1).default('Mishkat Academy'),
 
-  // 👑 Seed Admin (اختياري)
+  // 👑 Seed Admin
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_ADMIN_FIRSTNAME: z.string().min(1).optional().default('Admin'),
@@ -149,7 +130,6 @@ if (!derivedMONGODB) {
   process.exit(1);
 }
 
-// نصدّر env موحّد + MONGODB_URI
 export const env = {
   ...d,
   MONGODB_URI: derivedMONGODB,
@@ -159,13 +139,8 @@ export const env = {
 export const isProd = env.NODE_ENV === 'production';
 export const isDev = env.NODE_ENV === 'development';
 
-// لأننا بنستخدم كوكيز
 export const allowCredentials = true;
 
-/** origins:
- *  - '*' تعني السماح للجميع
- *  - غير ذلك: نفصل بالقُطوع وننظّف الفراغات ونهمل الفارغ
- */
 export const corsOrigins =
   env.CORS_ORIGINS === '*'
     ? '*'

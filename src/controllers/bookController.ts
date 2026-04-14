@@ -101,15 +101,14 @@ export const createBookUploadCtrl = catchAsync(async (req: Request, res: Respons
     pages: parseNumber(raw.pages),
     stock: raw.stock === '' ? undefined : parseNumber(raw.stock),
 
-    // تاريخ: لو جالك ISO string هنسيبه string والـ service/model يحوله Date؟ الأفضل نحوله هنا:
     publishDate: raw.publishDate ? new Date(raw.publishDate) : undefined,
 
     isbn: raw.isbn,
-    pdfUrl: raw.pdfUrl, // لو حابب تدعم رابط بدل الملف
+    pdfUrl: raw.pdfUrl,
     image: raw.image,
   };
 
-  // ✅ basic required guards (اختياري لكنه مفيد)
+  // ✅ basic required guards
   if (!body.title) throw AppError.badRequest('title مطلوب');
   if (!body.author) throw AppError.badRequest('author مطلوب');
   if (typeof body.price !== 'number') throw AppError.badRequest('price مطلوب ويجب أن يكون رقمًا');

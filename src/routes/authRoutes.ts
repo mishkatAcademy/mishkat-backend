@@ -10,8 +10,9 @@ import {
   verifyEmail,
   resendVerificationEmail,
   login,
-  logout,
   refreshToken,
+  getMe,
+  logout,
   forgotPassword,
   resetPassword,
 } from '../controllers/authController';
@@ -26,6 +27,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '../validations/user.schema';
+import { protect } from '../middlewares/authMiddleware';
 // import { env } from '../config/env';
 
 const router = express.Router();
@@ -106,6 +108,8 @@ router.post('/login', loginLimiter, loginSlow, validateRequestBody(loginSchema),
 
 // 🔄 تحديث الـ Access Token (يقرأ refresh_token من الكوكي)
 router.post('/refresh-token', refreshToken);
+
+router.get('/me', protect, getMe);
 
 // 🚪 تسجيل الخروج (يمسح الكوكيز)
 router.post('/logout', logout);

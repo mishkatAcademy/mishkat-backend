@@ -13,6 +13,7 @@ import {
   resendVerificationEmailService,
   loginService,
   refreshTokenService,
+  getMeService,
   logoutService,
   forgotPasswordService,
   resetPasswordService,
@@ -41,12 +42,12 @@ export const register = catchAsync(async (req: Request, res: Response, _next: Ne
   const files = (req.files || {}) as Record<string, Express.Multer.File[]>;
   const avatarFile = files.avatar?.[0];
 
-  // لو العميل بعت URL جاهز في body، نسمح بيه
+  // لو العميل بعت URL جاهز في body
   let avatarUrl: string | undefined = (req.body as any)?.avatar;
   let avatarRelPath: string | undefined;
 
   if (avatarFile) {
-    // خزّن الصورة محليًا تحت uploads/avatars/YYYY/MM
+    // نقوم بتخزين الصورة محليًا تحت uploads/avatars/YYYY/MM
     const up = await moveDiskFileToUploads(avatarFile, 'avatars');
     avatarUrl = up.url;
     avatarRelPath = up.relPath;
@@ -95,16 +96,24 @@ export const login = catchAsync(async (req: Request, res: Response, _next: NextF
 
 // ♻️ تحديث التوكن (Access من Refresh)
 export const refreshToken = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
-  // اسم الكوكي الموحّد: "refresh_token"
   const token = String(req.cookies?.[COOKIE_NAMES.refresh] || '');
   await refreshTokenService(token, res);
   return ok(res, { message: 'تم تحديث التوكن بنجاح ✅' });
 });
 
+// 👤 جلب المستخدم الحالي
+export const getMe = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+  if (!req.user?.id) {
+    throw AppError.unauthorized('غير مصرح: المستخدم غير موجود');
+  }
+
+  const user = await getMeService(req.user.id);
+  return ok(res, { user });
+});
+
 // 🚪 تسجيل الخروج
 export const logout = catchAsync(async (_req: Request, res: Response, _next: NextFunction) => {
   logoutService(res);
-  // ممكن تعمل 204: noContent(res) لو تحب
   return ok(res, { message: 'تم تسجيل الخروج بنجاح ✅' });
 });
 

@@ -201,6 +201,30 @@ export const refreshTokenService = async (token: string, res: Response) => {
   setAuthCookies(res, access.token, token);
 };
 
+/* ================================ Get Me ============================== */
+export const getMeService = async (userId: string) => {
+  if (!userId) throw new AppError('معرّف المستخدم غير موجود', 400);
+
+  const user = await User.findById(userId)
+    .select('_id firstName lastName email role avatarUrl isEmailVerified phoneNumber isDeleted')
+    .lean();
+
+  if (!user || user.isDeleted) {
+    throw new AppError('المستخدم غير موجود أو محذوف', 404);
+  }
+
+  return {
+    id: String(user._id),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+    isEmailVerified: user.isEmailVerified,
+    phoneNumber: user.phoneNumber,
+  };
+};
+
 /* ================================ Logout ============================== */
 export const logoutService = (res: Response) => {
   clearAuthCookies(res); // يستخدم أسماء الكوكيز الموحّدة وقيم sameSite/secure من env
