@@ -12,7 +12,6 @@ import {
   restoreBookCtrl,
   homepageBooksCtrl,
   booksWithCategoriesCtrl,
-  // 👇 جديدة لو ضفت الكونترولرات دي
   createBookUploadCtrl,
   updateBookUploadCtrl,
 } from '../controllers/bookController';
@@ -31,24 +30,29 @@ import { protect, isAdmin } from '../middlewares/authMiddleware';
 import { searchMiddleware } from '../middlewares/searchMiddleware';
 import Book from '../models/Book';
 
+// import { protect, isAdmin } from '../middlewares/authMiddleware';
+// import { searchMiddleware } from '../middlewares/searchMiddleware';
+// import Book from '../models/Book';
+
 // Multer (Disk) لرفع الغلاف/الـ PDF
 import { uploadBookAssetsDisk } from '../middlewares/upload.disk';
 
 const router = Router();
 
-/** 🟢 Public: home + catalog (+ search) */
+/** =========================
+ * 🟢 Public routes
+ * ========================= */
 
-// ✅ GET home books
+// ✅ Home books
 router.get('/home', validateQuery(homepageBooksQuerySchema), homepageBooksCtrl);
 
-// ✅ GET all books + categories that have books
+// ✅ Books grouped/returned with categories
 router.get('/with-categories', validateQuery(bookQuerySchema), booksWithCategoriesCtrl);
 
-// ✅ Optional quick search (لازم قبل `/:id`)
+// ✅ Quick search
 router.get(
   '/search',
   validateQuery(bookQuerySchema),
-  // ملاحظة: تأكد إن الـ middleware بيختم الرد، أو أضف handler بعدها يرجّع res.locals.result
   searchMiddleware({
     model: Book,
     fields: [
@@ -65,49 +69,73 @@ router.get(
   }),
 );
 
-// ✅ GET all books (قائمة عامة)
+// ✅ Public list
 router.get('/', validateQuery(bookQuerySchema), listBooksCtrl);
 
-// ✅ GET single book by SLUG
+// ✅ Public single by slug
 router.get('/slug/:slug', getBookBySlugCtrl);
 
-// ✅ GET single book by ID
-router.get('/:id', validateRequest({ params: bookIdParamsSchema }), getBookCtrl);
+/** =========================
+ * 🔐 Admin routes
+ * ========================= */
 
-/** 🔐 Admin: create/update/delete/restore */
-router.use(protect, isAdmin);
+router.get('/admin', protect, isAdmin, validateQuery(bookQuerySchema), listBooksAdminCtrl);
 
-// ✅ Admin: GET all books (full details)
-router.get('/admin', validateQuery(bookQuerySchema), listBooksAdminCtrl);
-
-// ✅ GET single book by ID (Admin)
-router.get('/admin/:id', validateRequest({ params: bookIdParamsSchema }), getBookAdminCtrl);
+router.get(
+  '/admin/:id',
+  protect,
+  isAdmin,
+  validateRequest({ params: bookIdParamsSchema }),
+  getBookAdminCtrl,
+);
 
 // ➕ Create (JSON only)
-router.post('/', validateRequestBody(createBookSchema), createBookCtrl);
+router.post('/', protect, isAdmin, validateRequestBody(createBookSchema), createBookCtrl);
 
-// ➕ Create with uploads (cover/pdf) — multipart/form-data
-router.post('/upload', uploadBookAssetsDisk, createBookUploadCtrl);
+// ➕ Create with uploads
+router.post('/upload', protect, isAdmin, uploadBookAssetsDisk, createBookUploadCtrl);
 
 // ✏️ Update (JSON only)
 router.patch(
   '/:id',
+  protect,
+  isAdmin,
   validateRequest({ params: bookIdParamsSchema, body: updateBookSchema }),
   updateBookCtrl,
 );
 
-// ✏️ Update with uploads (cover/pdf)
+// ✏️ Update with uploads
 router.patch(
   '/:id/upload',
+  protect,
+  isAdmin,
   validateRequest({ params: bookIdParamsSchema }),
   uploadBookAssetsDisk,
   updateBookUploadCtrl,
 );
 
-// 🗑️ Soft delete
-router.delete('/:id', validateRequest({ params: bookIdParamsSchema }), deleteBookCtrl);
-
 // ♻️ Restore
-router.patch('/:id/restore', validateRequest({ params: bookIdParamsSchema }), restoreBookCtrl);
+router.patch(
+  '/:id/restore',
+  protect,
+  isAdmin,
+  validateRequest({ params: bookIdParamsSchema }),
+  restoreBookCtrl,
+);
+
+// 🗑️ Soft delete
+router.delete(
+  '/:id',
+  protect,
+  isAdmin,
+  validateRequest({ params: bookIdParamsSchema }),
+  deleteBookCtrl,
+);
+
+/** =========================
+ * 🟢 Public single by ID
+ * لازم يكون في الآخر لتجنب أي conflict
+ * ========================= */
+router.get('/:id', validateRequest({ params: bookIdParamsSchema }), getBookCtrl);
 
 export default router;
