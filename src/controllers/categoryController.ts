@@ -18,7 +18,7 @@ import {
   categoryQuerySchema,
 } from '../validations/category.schema';
 
-// ✨ Types inferred from Zod (اختياري لكن مفيد للتايبينج)
+// ✨ Types inferred from Zod
 type CreateBody = z.infer<typeof createCategorySchema>;
 type UpdateBody = z.infer<typeof updateCategorySchema>;
 type IdParams = z.infer<typeof categoryIdParamsSchema>;
@@ -59,7 +59,6 @@ export const deleteCategoryCtrl = catchAsync(async (req: Request, res: Response)
   const { id } = ((req.validated?.params as IdParams) ?? req.params) as IdParams;
 
   await softDeleteCategory(String(id));
-  // خيار 1: 200 + body
   return ok(res, { deleted: true });
 });
 

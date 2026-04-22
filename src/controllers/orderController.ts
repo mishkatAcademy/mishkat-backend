@@ -40,7 +40,6 @@ export const listMyOrdersCtrl = catchAsync(async (req: Request, res: Response) =
 
   const result = await listMyOrders(userId, page, limit);
 
-  // ✅ رجّع object واحد
   return ok(res, result);
 });
 

@@ -6,7 +6,7 @@
  * - errorHandler: إخراج JSON نظيف + لوج مناسب + requestId
  *
  * 💡 ملاحظات:
- * - يعتمد على AppError الخاص بك (فيه: statusCode, status, code, cause, details, isOperational)
+ * - يعتمد على AppError (فيه: statusCode, status, code, cause, details, isOperational)
  * - يستخدم env.NODE_ENV للتمييز بين التطوير والإنتاج
  * - يدعم requestId من pino-http (req.id) أو هيدر x-request-id
  */
@@ -42,7 +42,6 @@ function fromMulterError(err: multer.MulterError) {
       code: 'E_MULTER_UNEXPECTED_FILE',
       message: 'تم رفع ملف بحقل غير متوقع',
     },
-    // قد لا تتوفر في كل الإصدارات:
     LIMIT_FIELD_KEY_TOO_LONG: {
       status: 400,
       code: 'E_MULTER_FIELD_KEY_LONG',
@@ -77,7 +76,6 @@ export const notFound = (req: Request, _res: Response, next: NextFunction) => {
 /* -------------------------- Error Converter ---------------------------- */
 /**
  * يحوّل أغلب الأنواع المعروفة من الأخطاء إلى AppError موحّد.
- * يجب وضعه قبل errorHandler:
  *   app.use(errorConverter);
  *   app.use(errorHandler);
  */
@@ -149,12 +147,12 @@ export const errorConverter = (err: any, _req: Request, _res: Response, next: Ne
     return next(AppError.conflict('Duplicate key', 'E_DUPLICATE', details));
   }
 
-  // 8) Rate limiter (express-rate-limit) — قد تختلف الأسماء/الشكل
+  // 8) Rate limiter (express-rate-limit)
   if (err?.name === 'RateLimitError' || err?.name === 'RateLimitExceeded' || err?.status === 429) {
     return next(new AppError('Too many requests', 429, { code: 'E_RATE_LIMIT' }));
   }
 
-  // 9) Multer (رفع الملفات)
+  // 9) Multer
   if (err instanceof multer.MulterError) {
     return next(fromMulterError(err));
   }
@@ -171,14 +169,14 @@ export const errorConverter = (err: any, _req: Request, _res: Response, next: Ne
 /* ---------------------------- Error Handler ---------------------------- */
 /**
  * الميدلويير النهائي الذي يرسل الرد للعميل.
- * - يُتوقع استقبال AppError (من errorConverter أو من أماكن أخرى في السلسلة)
+ * - يُتوقع استقبال AppError (من errorConverter أو من أي مكان تاني في السلسلة)
  * - يُرجع JSON: { status, message, code, details?, stack? }
  */
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
-  // لو الرد بدأ يتبعت، متحاولش ترد تاني
+  // لو الرد بدأ يتبعت، يمنع الرد مرة تانية
   if (res.headersSent) return res.end();
 
-  // خلي معانا نسخة من الـ err الأصلي لبعض الهيدرز (Retry-After)
+  // نسخة من الـ err الأصلي لبعض الهيدرز (Retry-After)
   const originalErr = err;
 
   // التعديل قبل البرودكشن
@@ -191,7 +189,7 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   const status = (appErr as any).status || (statusCode >= 500 ? 'error' : 'fail');
   const isProd = env.NODE_ENV === 'production';
 
-  // 🔐 في الإنتاج، لا تكشف عن رسائل 5xx غير المتوقعة
+  // 🔐 في الإنتاج
   const safeMessage =
     isProd && statusCode >= 500 && !appErr.isOperational
       ? 'حدث خطأ غير متوقع'
@@ -201,11 +199,11 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   const body: any = {
     status, // "fail" | "error"
     message: safeMessage,
-    code: appErr.code, // كود داخلي اختياري
+    code: appErr.code, // كود داخلي
     requestId,
   };
 
-  // أظهر details دائمًا في التطوير، وفي الإنتاج لطلبات 4xx فقط
+  // إظهار details دائمًا في التطوير، أما في الإنتاج فتظهر لطلبات 4xx فقط
   if (!isProd || statusCode < 500) {
     if (appErr.details) body.details = appErr.details;
   }
@@ -215,14 +213,10 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
 
   // هيدرز مساعدة حسب الحالة
   if (statusCode === 401) {
-    // علشان أدوات/متصفحات تفهم إن المطلوب Bearer
     res.setHeader('WWW-Authenticate', 'Bearer');
   }
 
   if (statusCode === 429) {
-    // حاول نرسل Retry-After لو عندنا معلومة مناسبة:
-    // - بعض الإصدارات من express-rate-limit ترفق msBeforeNext في الخطأ
-    // - أو يضيف req.rateLimit.resetTime (Date)
     const msBeforeNext =
       typeof (originalErr as any)?.msBeforeNext === 'number'
         ? (originalErr as any).msBeforeNext

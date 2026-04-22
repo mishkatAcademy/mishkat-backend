@@ -60,17 +60,6 @@ export const createBookCtrl = catchAsync(async (req: Request, res: Response) => 
 });
 
 // ✅ Create (multipart: cover/pdf)
-// export const createBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
-//   const body = (req.body ?? {}) as any;
-//   const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
-//   const files = {
-//     cover: filesMap.cover?.[0],
-//     pdf: filesMap.pdf?.[0],
-//   };
-//   const book = await createBookWithUploads(body, files);
-//   return created(res, { book });
-// });
-
 export const createBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
   const raw = (req.body ?? {}) as any;
 
@@ -162,24 +151,11 @@ export const updateBookCtrl = catchAsync(async (req: Request, res: Response) => 
 });
 
 // ✏️ Update (multipart: cover/pdf)
-// export const updateBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
-//   const { id } = (req.validated?.params as { id: string }) ?? req.params;
-//   const body = (req.body ?? {}) as any;
-//   const filesMap = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
-
-//   const files = {
-//     cover: filesMap.cover?.[0],
-//     pdf: filesMap.pdf?.[0],
-//   };
-
-//   const book = await updateBookWithUploads(String(id), body, files);
-//   return ok(res, { book });
-// });
 export const updateBookUploadCtrl = catchAsync(async (req: Request, res: Response) => {
   const { id } = (req.validated?.params as { id: string }) ?? req.params;
   const raw = (req.body ?? {}) as any;
 
-  // ✅ parse JSON fields (كلهم اختياري في update)
+  // ✅ parse JSON fields
   const body = {
     ...raw,
     title: parseJSONField<{ ar?: string; en?: string }>(raw.title, 'title'),

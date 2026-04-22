@@ -72,5 +72,4 @@ export const deleteAddress = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.validated!.params as { id: string };
   await deleteAddressService(userId, id);
   return ok(res, { success: true, message: 'تم حذف العنوان بنجاح' });
-  // أو: return noContent(res);
 });

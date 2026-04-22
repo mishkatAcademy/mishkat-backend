@@ -22,28 +22,23 @@ export async function seedAdminUser() {
 
     const $set: any = {};
 
-    // ✅ تحديث الاسم عند الطلب فقط
     if (updateName) {
       $set.firstName = firstName;
       $set.lastName = lastName;
     }
 
-    // ✅ تحديث verify عند الطلب
     if (verify) $set.isEmailVerified = true;
 
-    // ✅ ترقية/استعادة
     if (existing.isDeleted) $set.isDeleted = false;
     if (existing.role !== 'admin') $set.role = 'admin';
 
-    // ✅ تحديث الباسورد عند الطلب فقط
     if (resetPass && password) {
       const bcrypt = (await import('bcryptjs')).default;
       const salt = await bcrypt.genSalt(10);
       const hashed = await bcrypt.hash(password, salt);
-      $set.password = hashed; // لازم hashed لأن updateOne بيتخطّى pre('save')
+      $set.password = hashed;
     }
 
-    // لو مفيش حاجة تتحدث… اخرج
     if (Object.keys($set).length) {
       await User.updateOne({ _id: existing._id }, { $set });
       logger.warn(
@@ -55,7 +50,6 @@ export async function seedAdminUser() {
     return;
   }
 
-  // إنشاء جديد
   await User.create({
     firstName,
     lastName,

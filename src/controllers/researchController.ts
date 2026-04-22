@@ -48,15 +48,12 @@ export const createResearchCtrl = catchAsync(async (req: Request, res: Response)
 
 /** GET /me/research (user) */
 export const listMyResearchCtrl = catchAsync(async (req: Request, res: Response) => {
-  // تأكيد المصادقة
   const userId = req.user?.id;
-  // خُد القيم من validated.query لو موجودة، وإلا ارجع لـ req.query
   const vq =
     (req.validated?.query as Partial<{ page: number | string; limit: number | string }>) ?? {};
   const rawPage = vq.page ?? (req.query as any)?.page;
   const rawLimit = vq.limit ?? (req.query as any)?.limit;
 
-  // تحويلات آمنة + حدود منطقية
   const toPosInt = (val: unknown, def: number) => {
     const n = typeof val === 'string' ? parseInt(val, 10) : Number(val);
     return Number.isFinite(n) && n > 0 ? n : def;

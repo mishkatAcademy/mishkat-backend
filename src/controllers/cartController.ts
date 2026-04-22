@@ -43,7 +43,7 @@ export const removeCartItem = catchAsync(async (req: Request, res: Response) => 
   const { id: cartItemId } = (req.validated?.params as { id: string }) ?? req.params;
   await removeCartItemService({ userId: String(userId), cartItemId: String(cartItemId) });
   return ok(res, { deleted: true });
-  // أو: return noContent(res);
+  // or return noContent(res);
 });
 
 // DELETE /api/v1/cart

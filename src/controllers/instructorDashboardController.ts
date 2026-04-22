@@ -22,7 +22,6 @@ export const listMySupportedOfferingsCtrl = catchAsync(async (req: Request, res:
   const userId = req.user?.id?.toString();
   if (!userId) throw AppError.unauthorized('Unauthorized');
 
-  // لو عملت query schema: activeOnly
   const activeOnly = (req.validated?.query as any)?.activeOnly ?? true;
 
   const result = await listMySupportedOfferingsService(userId, Boolean(activeOnly));

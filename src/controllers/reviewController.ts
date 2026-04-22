@@ -19,7 +19,6 @@ import Consultation from '../models/ConsultationBooking';
 import Research from '../models/ResearchRequest';
 import { Model } from 'mongoose';
 
-// 🧠 خريطة للنماذج المرتبطة بالتقييم
 const modelMap: Record<ReviewTargetType, Model<any>> = {
   book: Book,
   course: Course,

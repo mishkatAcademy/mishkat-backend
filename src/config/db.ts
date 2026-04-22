@@ -6,17 +6,15 @@ import { logger } from '../utils/logger';
 let listenersBound = false;
 
 function maskUri(uri: string) {
-  // اخفاء الـ credentials في اللوج
   return uri.replace(/(mongodb(\+srv)?:\/\/)([^@/]+)@/i, '$1****@');
 }
 
 export async function connectDB() {
   // إعدادات جلوبال
-  mongoose.set('debug', isDev); // لوج الاستعلامات في التطوير
-  mongoose.set('sanitizeFilter', true); // يمنع حقن $ داخل فلاتر الاستعلام
-  mongoose.set('autoIndex', isDev); // تلقائي في الديف فقط
-  mongoose.set('autoCreate', isDev); // إنشاء الكوليكشن تلقائيًا في الديف
-  // يجعل مطابقة الاستعلامات أكثر صرامة. مناسب لمعظم الحالات
+  mongoose.set('debug', isDev);
+  mongoose.set('sanitizeFilter', true);
+  mongoose.set('autoIndex', isDev);
+  mongoose.set('autoCreate', isDev);
   mongoose.set('strictQuery', true);
   mongoose.set('bufferCommands', false);
 
@@ -35,7 +33,6 @@ export async function connectDB() {
   console.log('[mongoose] sanitizeFilter=', mongoose.get('sanitizeFilter'));
   try {
     await mongoose.connect(uri, {
-      // مهلة قصيرة لرسائل الخطأ علشان تكون أسرع لو السيرفر مش شغال
       serverSelectionTimeoutMS: 5_000,
       maxPoolSize: 20,
     });

@@ -17,7 +17,7 @@ import type { Role } from '../types';
  * يرجّع null لو مفيش توكن صالح.
  */
 export function getAccessToken(req: Request): string | null {
-  // (1) الهيدر — Express بيقدّم req.get اللي بتتعامل case-insensitive
+  // (1) header
   const authFromGet = req.get('authorization'); // string | undefined
   // احتياط نادر لو حد حقن الهيدر بحروف كبيرة بشكل غير قياسي
   const rawAuth = authFromGet ?? (req.headers as any)?.Authorization;
@@ -40,7 +40,6 @@ export function getAccessToken(req: Request): string | null {
     return fromCookie.trim();
   }
 
-  // (3) فالباك لاسم شائع — اشيله لو مش عايزه
   const fallback = req.cookies?.['access_token'];
   if (typeof fallback === 'string' && fallback.trim()) {
     return fallback.trim();
@@ -65,12 +64,11 @@ export async function protect(req: Request, _res: Response, next: NextFunction) 
     const token = getAccessToken(req);
     if (!token) throw AppError.unauthorized('غير مصرح: لا يوجد توكن وصول');
 
-    // لو حابب تشدد التحقق بالإصدار والجمهور:
+    // ملهاش لازمة اللي معمول كافي ويؤدي الغرض
     // const payload = verifyJwt(token, env.JWT_SECRET, { issuer: 'mishkat.api', audience: 'mishkat.app' });
     const payload = verifyJwt(token, env.JWT_SECRET);
 
     if ((payload as any).type && (payload as any).type !== 'access') {
-      // بنقبل التوكنات اللي مافيهاش type (للخلفية) لكن لو موجودة لازم تبقى 'access'
       throw AppError.unauthorized('توكن غير صالح');
     }
 
@@ -80,7 +78,6 @@ export async function protect(req: Request, _res: Response, next: NextFunction) 
 
     const user = await User.findById(userId).select('_id role isDeleted').lean();
     if (!user || user.isDeleted) {
-      // 403 أدق من 401 هنا لأن التوكن صحيح لكن الحالة لا تسمح
       throw AppError.forbidden('الحساب غير متاح أو محذوف');
     }
 
@@ -102,6 +99,8 @@ export function isAdmin(req: Request, _res: Response, next: NextFunction) {
 /**
  * ✅ requireRole: قيد الوصول على مجموعة أدوار
  * مثال: router.get('/x', protect, requireRole('instructor','admin'), handler)
+ * معمواة علشان ممكن نحتاجها في version II إن شاء الله 
+ * لم تستخدم
  */
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {

@@ -54,7 +54,7 @@ export const updateMyProfile = catchAsync(
     const payload = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      avatar: req.body.avatar, // URL اختياري من الـ body
+      avatar: req.body.avatar,
     };
 
     const user = await updateMyProfileService({ userId, payload, avatarFile });
@@ -67,7 +67,6 @@ export const deleteMyAccount = catchAsync(async (req: Request, res: Response) =>
   const userId = req.user?.id;
   if (!userId) throw AppError.unauthorized('غير مصرح: المستخدم غير معرّف');
 
-  // (اختياري) امنع الأدمن من حذف نفسه
   const me = await User.findById(userId).select('role isDeleted');
   if (!me) throw AppError.notFound('المستخدم غير موجود');
   if (me.role === 'admin') throw AppError.forbidden('لا يمكن حذف حساب الأدمن');
@@ -75,10 +74,9 @@ export const deleteMyAccount = catchAsync(async (req: Request, res: Response) =>
   // ⛳️ idempotent soft delete
   if (!me.isDeleted) {
     await deactivateUserService(userId);
-    // TODO: enqueue cleanup job (إلغاء holds/تفريغ cart/إغلاق طلبات غير مدفوعة...) إن لزم
+    // TODO: (إلغاء holds/تفريغ cart/إغلاق طلبات غير مدفوعة...) جسب رغبة العميل
   }
 
-  // 🧼 امسح الكوكيز = خروج قسري
   clearAuthCookies(res);
 
   // 204 No Content

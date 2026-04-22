@@ -158,18 +158,28 @@ export const bookIdParamsSchema = z.object({
 });
 
 /* --------------------------- ?query (القائمة العامة) --------------------------- */
+const booleanFromQuery = z.preprocess((val) => {
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'string') {
+    const v = val.trim().toLowerCase();
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+  }
+  return val;
+}, z.boolean());
+
 export const bookQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
 
-  includeDeleted: z.coerce.boolean().optional().default(false),
+  includeDeleted: booleanFromQuery.optional().default(false),
 
   search: z.string().trim().optional(),
   category: objectId.optional(),
   language: z.enum(['ar', 'en']).optional(),
-  isDigital: z.coerce.boolean().optional(),
-  inStock: z.coerce.boolean().optional(),
-  showInHomepage: z.coerce.boolean().optional(),
+  isDigital: booleanFromQuery.optional(),
+  inStock: booleanFromQuery.optional(),
+  showInHomepage: booleanFromQuery.optional(),
 
   minPrice: z.coerce.number().nonnegative().optional(),
   maxPrice: z.coerce.number().nonnegative().optional(),

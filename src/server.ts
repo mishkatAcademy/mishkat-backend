@@ -66,7 +66,7 @@ const apiPrefix = '/api/v1';
 const isProd = env.NODE_ENV === 'production';
 
 /* ============================================================================
-1) Trust proxy (لـ secure cookies خلف Nginx/ELB) + Request logging
+1) Trust proxy
 ============================================================================ */
 app.set('trust proxy', env.TRUST_PROXY ? 1 : 0);
 
@@ -79,9 +79,7 @@ app.use(
 );
 
 /* ============================================================================
-2) CORS مبكّراً + Preflight بنفس الإعدادات
-- يسمح بالأورجنز من env
-- يدعم الكوكيز (credentials: true)
+2) CORS
 ============================================================================ */
 const corsOptions: CorsOptions = {
   credentials: true,
@@ -107,7 +105,6 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
-// ترجمة خطأ CORS لرد موحّد
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof Error && err.message === 'Not allowed by CORS') {
     return res.status(403).json({ status: 'fail', message: 'CORS: Origin not allowed' });
@@ -117,12 +114,9 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
 
 /* ============================================================================
 3) Security hardening + Parsers
-// Helmet (في التطوير قد تعطل CSP لتجنّب مشاكل أدواتك)
+// Helmet
 ============================================================================ */
-// ✅ دالة تغليف ترجع RequestHandler متوافق مع Express
 function makeHelmet(options?: HelmetOptions): RequestHandler {
-  // نعمل cast بسيط لأن helmet بيرجّع دالة بتوقيع IncomingMessage/ServerResponse
-  // وده بيبوّظ استدلال الأوفرلود لـ app.use في بعض البيئات
   return (helmet as unknown as (opts?: HelmetOptions) => RequestHandler)(options);
 }
 
@@ -132,7 +126,6 @@ if (isProd) {
   app.use(makeHelmet({ contentSecurityPolicy: false }));
 }
 
-// حماية من parameter pollution مع whitelist بسيطة
 app.use(
   hpp({
     whitelist: ['categories', 'tags', 'files'],
@@ -143,10 +136,8 @@ app.use(
 // ضغط الردود
 app.use(compression());
 
-// ✅ هيلبر بسيط لتطبيع أي ميدلويير إلى RequestHandler
 const asHandler = (mw: any): RequestHandler => mw as unknown as RequestHandler;
 
-// Parsers (حدود الأحجام من env)
 app.use(asHandler(express.json({ limit: env.JSON_BODY_LIMIT })));
 app.use(asHandler(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT })));
 
@@ -175,7 +166,7 @@ app.use(
 );
 
 /* ============================================================================
-4) Health/Ready endpoints (خارج أي Rate Limit)
+4) Health/Ready endpoints (before Rate Limit)
 ============================================================================ */
 app.get('/healthz', (_req, res) => res.status(200).json({ status: 'ok' }));
 app.get('/readyz', (_req, res) => {
@@ -186,9 +177,6 @@ app.get('/readyz', (_req, res) => {
 /* ============================================================================
 5) Rate limit عام لمسارات /auth
 ============================================================================ */
-// /* ============================================================================
-// 5) Rate limit + Slowdown عام لمسارات /auth (تطبيق إضافي داخل authRoutes لمسارات حرِجة)
-// ============================================================================ */
 const authLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS, // مثال: 15 دقيقة
   max: env.RATE_LIMIT_MAX, // مثال: 100 طلب لكل IP
@@ -206,6 +194,7 @@ const authLimiter = rateLimit({
 6) Routes (prefix موحّد)
 ============================================================================ */
 app.use(`${apiPrefix}/auth`, authLimiter, authRoutes);
+// لغيت ال authSlow بعد المشاكل اللي حصلت فاكر
 // app.use(`${apiPrefix}/auth`, authLimiter, authSlow, authRoutes);
 app.use(`${apiPrefix}/users`, userRoutes);
 app.use(`${apiPrefix}/admin`, adminRoutes);
@@ -232,7 +221,7 @@ app.use(`${apiPrefix}/reviews`, reviewRoutes);
 // app.use(`${apiPrefix}/quiz-responses`, quizResponseRoutes);
 
 /* ============================================================================
-7) Error middlewares (بالترتيب الصحيح)
+7) Error middlewares
 ============================================================================ */
 app.use(notFound); // 404 لأي Route غير موجود
 app.use(errorConverter); // حوّل أخطاء شائعة إلى AppError موحّد

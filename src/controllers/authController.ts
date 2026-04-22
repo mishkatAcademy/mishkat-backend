@@ -42,12 +42,11 @@ export const register = catchAsync(async (req: Request, res: Response, _next: Ne
   const files = (req.files || {}) as Record<string, Express.Multer.File[]>;
   const avatarFile = files.avatar?.[0];
 
-  // لو العميل بعت URL جاهز في body
+  // لو المستخدم بعت URL جاهز في body
   let avatarUrl: string | undefined = (req.body as any)?.avatar;
   let avatarRelPath: string | undefined;
 
   if (avatarFile) {
-    // نقوم بتخزين الصورة محليًا تحت uploads/avatars/YYYY/MM
     const up = await moveDiskFileToUploads(avatarFile, 'avatars');
     avatarUrl = up.url;
     avatarRelPath = up.relPath;

@@ -42,6 +42,7 @@ export const listInstructorsCtrl = catchAsync(async (req: Request, res: Response
 
 /** GET /consultations/instructors/:userId */
 export const getPublicInstructorCtrl = catchAsync(async (req, res) => {
+  // هنا بنبعت ال userId وليس ال instructorId
   const { userId } = req.params;
   const { type, activeOnly } = (req.validated?.query as any) ?? req.query;
 
@@ -55,6 +56,7 @@ export const getPublicInstructorCtrl = catchAsync(async (req, res) => {
 
 /** GET /consultations/instructors/:instructorId/availability?date=YYYY-MM-DD&offeringId=... */
 export const availabilityCtrl = catchAsync(async (req: Request, res: Response) => {
+  // هنا بنرسل ال instructorId
   const { instructorId } = (req.validated?.params as { instructorId?: string }) ?? req.params;
   const { date, offeringId } = (req.validated?.query as { date: string; offeringId: string })!;
 
@@ -94,7 +96,6 @@ export const calendarOverlayCtrl = catchAsync(async (req: Request, res: Response
   return ok(res, data);
 });
 
-/** POST /consultations/hold  (أو /consultations/bookings كواجهة alias) */
 export const createHoldAndPaymentCtrl = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user!.id?.toString();
   const { instructorId, offeringId, date, startHHMM, applicant, idempotencyKey } =
@@ -118,7 +119,6 @@ export const createBookingAliasCtrl = createHoldAndPaymentCtrl;
 
 /** POST /consultations/webhook/moyasar (عام) */
 export const consultationWebhookCtrl = catchAsync(async (req: Request, res: Response) => {
-  // ملاحظة: لو مزوّد الدفع يتطلّب raw-body للتحقق من التوقيع، ظبّطه في السيرفر قبل json()
   const result = await handleConsultationWebhook(req.body);
   return ok(res, result);
 });
