@@ -406,7 +406,7 @@ export async function instructorUpsertMyException(
   const next = {
     date: normalizedDate,
     closed: !!input.closed,
-    slots: input.closed ? undefined : input.slots, // لو closed=true نمسح slots
+    slots: input.closed ? undefined : input.slots,
   };
 
   if (idx >= 0) exps[idx] = next;
@@ -425,21 +425,23 @@ export async function instructorUpsertMyException(
 
 /** Self: delete exception ليوم واحد */
 export async function instructorDeleteMyException(userId: string, dateYMD: string) {
-  const prof = await InstructorProfile.findOne({ user: userId });
-  if (!prof) throw AppError.notFound('Instructor profile not found');
+  const prof = await loadMyProfileDoc(userId);
 
-  const exps = (prof.exceptions ?? []) as any[];
-  prof.exceptions = exps.filter((e) => !sameExceptionDay(e.date, dateYMD)) as any;
+  const currentExceptions = Array.isArray(prof.exceptions) ? prof.exceptions : [];
 
+  const nextExceptions = currentExceptions.filter((e: any) => toRiyadhYMD(e.date) !== dateYMD);
+
+  if (nextExceptions.length === currentExceptions.length) {
+    throw AppError.notFound('No exception found for this date');
+  }
+
+  prof.exceptions = nextExceptions as any;
+  prof.markModified('exceptions');
   await prof.save();
 
-  const populated = await prof.populate({
-    path: 'user',
-    select: 'firstName lastName email role avatarUrl isDeleted',
-  });
-
-  return toInstructorDTO(populated.toObject(), { includeUser: true });
+  return toDTOWithUser(prof);
 }
+
 /* new */
 async function loadMyProfileDoc(userId: string) {
   const prof = await InstructorProfile.findOne({ user: userId });
@@ -531,15 +533,23 @@ POST /instructors/me/exceptions/:dateYMD/off
 export async function instructorSetDayOff(userId: string, dateYMD: string) {
   const prof = await loadMyProfileDoc(userId);
 
-  const normalizedDate = dateInRiyadhToUTC(dateYMD, '00:00');
-  const exps = (prof.exceptions ?? []) as any[];
+  const normalizedDate = dateInRiyadhToUTC(dateYMD, '12:00');
 
-  const idx = exps.findIndex((e) => toRiyadhYMD(e.date) === dateYMD);
+  const exps = Array.isArray(prof.exceptions) ? [...prof.exceptions] : [];
 
-  const next = { date: normalizedDate, closed: true, slots: undefined };
+  const idx = exps.findIndex((e: any) => toRiyadhYMD(e.date) === dateYMD);
 
-  if (idx >= 0) exps[idx] = next;
-  else exps.push(next);
+  const next = {
+    date: normalizedDate,
+    closed: true,
+    slots: undefined,
+  };
+
+  if (idx >= 0) {
+    exps[idx] = next;
+  } else {
+    exps.push(next);
+  }
 
   prof.exceptions = exps as any;
   prof.markModified('exceptions');
