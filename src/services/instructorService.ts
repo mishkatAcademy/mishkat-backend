@@ -74,6 +74,11 @@ function ensureNoOverlaps(ranges: { start: string; end: string }[]) {
   }
 }
 
+function filterFutureAndTodayExceptions(exceptions: any[] = []) {
+  const todayYMD = toRiyadhYMD(new Date());
+  return exceptions.filter((e) => toRiyadhYMD(e.date) >= todayYMD);
+}
+
 function allowedUpdateKeysAdmin(): (keyof UpdateInput)[] {
   return [
     'displayName',
@@ -128,6 +133,12 @@ function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
 
   const displayNameObj = p.displayName as Localized | undefined;
 
+  // ✅ إخفاء الاستثناءات الماضية قبل اليوم الحالي بتوقيت الرياض
+  const todayYMD = toRiyadhYMD(new Date());
+  const visibleExceptions = Array.isArray(p.exceptions)
+    ? p.exceptions.filter((e: any) => toRiyadhYMD(e.date) >= todayYMD)
+    : [];
+
   const base: any = {
     id: String(p._id),
     userId: String(user?._id ?? p.user),
@@ -150,7 +161,7 @@ function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
     maxAdvanceDays: p.maxAdvanceDays,
     rescheduleWindowHours: p.rescheduleWindowHours,
     weekly: p.weekly,
-    exceptions: p.exceptions,
+    exceptions: visibleExceptions,
     meetingMethod: p.meetingMethod,
     meetingUrl: p.meetingUrl,
     isActive: p.isActive,
