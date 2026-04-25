@@ -3,11 +3,11 @@ import { Types } from 'mongoose';
 import AppError from '../utils/AppError';
 import CartItem from '../models/CartItem';
 
-// موديلات العناصر
 import Book from '../models/Book';
 import Course from '../models/Course';
 import ConsultationOffering from '../models/ConsultationOffering';
 import ConsultationHold from '../models/ConsultationHold';
+// لن يوضع في السلة
 // import Research from '../models/ResearchRequest';
 
 const MAX_QTY_PHYSICAL_BOOK = 20 as const;
@@ -20,7 +20,6 @@ const pickLocalized = (obj?: Localized): Localized => ({
 });
 
 function unitPriceFromDoc(doc: any) {
-  // نتوقع حقول halalas (حسب تعديلات الكتب) وإلا fallback لو لسه قديم
   const price =
     typeof doc.priceHalalas === 'number' ? doc.priceHalalas : Math.round((doc.price || 0) * 100);
   const sale =
@@ -42,7 +41,6 @@ function ensureEnoughStock(book: any, desiredQty: number) {
 }
 
 function isFixedQuantity(type: string, doc: any): boolean {
-  // Book: لو رقمي → ثابت 1؛ غير كده الأنواع التانية كلها ثابت 1
   if (type === 'Book') return !!doc.isDigital;
   return true; // Course / ConsultationHold
 }
@@ -78,7 +76,7 @@ async function buildSnapshotFromHold(hold: any) {
     end: hold.end,
     durationMinutes: off.durationMinutes,
     consultationType: off.type,
-    expiresAt: hold.expiresAt, // ✅ هنا
+    expiresAt: hold.expiresAt,
   };
 }
 
@@ -152,11 +150,11 @@ export async function addCartItemService(input: {
     if (doc.expiresAt && new Date(doc.expiresAt) <= new Date()) {
       throw AppError.badRequest('Hold انتهى');
     }
-    // لو الـ hold مربوط بمستخدم، لازم هو نفسه
+
     if (doc.user && String(doc.user) !== String(userId)) {
       throw AppError.forbidden('هذا الـ Hold لا يخص هذا المستخدم');
     }
-    // كمية ثابتة
+
     quantity = 1;
   }
 

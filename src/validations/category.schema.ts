@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 /* ========== Helpers مشتركة ========== */
 
-// ObjectId صارم: 24 hex
 const objectIdStrict = z
   .string()
   .regex(/^[a-fA-F0-9]{24}$/, 'معرّف غير صالح (يجب أن يكون 24 خانة hex)');
@@ -40,15 +39,12 @@ export const createCategorySchema = z.object({
   title: localizedTextSchema,
   description: localizedTextSchema.optional(),
   image: z.string().url().optional(),
-  // لو عايز تبدأ بقيمة افتراضية محدّدة:
   scopes: z
     .array(z.enum(['book', 'course']))
     .min(1, 'اختر نطاقًا واحدًا على الأقل')
     .default(['book', 'course'])
     .optional(),
   order: z.number().int().min(0).optional(),
-  // (اختياري) لو هتخزّن محليًا: imageRelPath
-  // imageRelPath: z.string().trim().optional(),
 });
 
 export const updateCategorySchema = z
@@ -61,7 +57,6 @@ export const updateCategorySchema = z
       .min(1)
       .optional(),
     order: z.number().int().min(0).optional(),
-    // imageRelPath: z.string().trim().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'يرجى إرسال حقل واحد على الأقل للتحديث',
@@ -80,7 +75,6 @@ export const categoryQuerySchema = z
     nonEmpty: z.coerce.boolean().optional(), // true => رجّع اللي فيه عناصر فقط حسب scope
     includeDeleted: z.coerce.boolean().optional().default(false),
 
-    // اسم:اتجاه,اسم:اتجاه ... من القائمة البيضاء فقط
     sort: z
       .string()
       .optional()

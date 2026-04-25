@@ -24,7 +24,7 @@ import { uploadResearchFilesDisk } from '../middlewares/upload.disk';
 const router = Router();
 
 /** ============ مستخدم ============ */
-// إنشاء طلب (multipart/form-data) ← لازم multer قبل validate
+// إنشاء طلب (multipart/form-data)
 router.post(
   '/requests',
   protect,
@@ -56,7 +56,7 @@ router.get(
   downloadMyResearchAttachmentCtrl,
 );
 
-/** ============ إدمن ============ */
+/** ============ أدمن ============ */
 router.use(protect, isAdmin);
 
 // لستة كل الطلبات مع فلاتر

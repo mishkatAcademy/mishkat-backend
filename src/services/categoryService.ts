@@ -31,7 +31,6 @@ function parseSort(sortStr?: string): Record<string, 1 | -1> {
     if (!rawField || !ALLOWED_SORT_FIELDS.has(rawField as any)) continue;
     out[rawField] = rawDir?.toLowerCase() === 'asc' ? 1 : -1;
   }
-  // fallback لو كله اتفلتر
   return Object.keys(out).length ? out : { order: 1, createdAt: -1 };
 }
 
@@ -50,10 +49,8 @@ export async function createCategory(data: {
   scopes?: CategoryScope[];
   order?: number;
 }) {
-  // 1) slug أساسي من العنوان
   const baseSlug = slugFromLocalized(data.title);
 
-  // 2) slug فريد (استثني المحذوفين اختياريًا عبر filter)
   const slug = await makeUniqueSlug(Category, baseSlug, {
     filter: { isDeleted: false },
   });
@@ -80,7 +77,6 @@ export async function listCategories(input: ListInput) {
   const q: any = {};
   if (!input.includeDeleted) q.isDeleted = false;
 
-  // scopes: مطابقة عنصر داخل المصفوفة
   if (input.scope) q.scopes = input.scope;
 
   if (input.nonEmpty) {
@@ -142,7 +138,7 @@ export async function updateCategory(
   if (data.title) {
     cat.title = data.title;
     const baseSlug = slugFromLocalized(data.title);
-    // 👇 هنا كان الخطأ: لازم نمرّر كائن options مش string
+
     cat.slug = await makeUniqueSlug(Category, baseSlug, {
       excludeId: String(cat._id),
       filter: { isDeleted: false },

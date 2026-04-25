@@ -97,7 +97,7 @@ router.get(
   calendarOverlayCtrl,
 );
 
-/** 🟢 Public: payment webhook (سيبه بدون validate لو هتتحقق من التوقيع بـ raw body) */
+/** 🟢 Public: payment webhook */
 router.post('/webhook/moyasar', consultationWebhookCtrl);
 
 /** 🔐 Protected: my bookings */

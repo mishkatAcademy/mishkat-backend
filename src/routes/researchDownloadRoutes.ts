@@ -16,15 +16,9 @@ import { getAbsolutePath } from '../services/localFiles.disk';
 const pipe = promisify(pipeline);
 const router = Router();
 
-/**
- * 🔐 جذر ملفات الرفع للموديول
- * - نخزّن في الداتابيز "relativePath" تحت uploads/research
- * - هنا بنبني المسار المطلق ونضمن إنه داخل الجذر
- */
 const UPLOADS_ROOT = path.join(process.cwd(), 'uploads', 'research');
 // const UPLOADS_ROOT = path.join(process.cwd(), 'uploads', 'private', 'research');
 
-/** ✅ تأكد أن المسار داخل الجذر (منع path traversal) */
 function assertInsideRoot(absPath: string) {
   const root = path.resolve(UPLOADS_ROOT);
   const target = path.resolve(absPath);
@@ -40,12 +34,6 @@ function contentDispositionAttachment(originalName: string) {
   return `attachment; filename="${safe}"; filename*=UTF-8''${utf8}`;
 }
 
-/**
- * 🧩 إرسال مرفق كـ attachment عبر Stream
- * - يدعم 304 If-Modified-Since (بسيط)
- * - يوقف الاستريم عند إغلاق اتصال العميل (aborted/close)
- * - بدون استخدام req.signal (غير موجود في Express)
- */
 async function sendAttachment(
   req: Request,
   res: Response,
@@ -53,7 +41,6 @@ async function sendAttachment(
   mime: string | undefined,
   originalName: string,
 ) {
-  // وجود الملف + بياناته
   let stat: fs.Stats;
   try {
     stat = await fs.promises.stat(absPath);
@@ -61,7 +48,6 @@ async function sendAttachment(
     throw AppError.notFound('الملف غير موجود على الخادم');
   }
 
-  // 304 If-Modified-Since (اختياري/خفيف)
   const ifMod = req.headers['if-modified-since'];
   if (ifMod) {
     const since = new Date(String(ifMod)).getTime();
@@ -81,18 +67,16 @@ async function sendAttachment(
 
   const readStream = fs.createReadStream(absPath);
 
-  // لو العميل قفل الاتصال، هنوقف الاستريم
   const onAbort = () => {
     readStream.destroy();
   };
-  // استخدم once للتنظيف تلقائيًا بعد أول نداء
+
   req.once('aborted', onAbort);
   res.once('close', onAbort);
 
   try {
     await pipe(readStream, res);
   } catch (err: any) {
-    // لو العميل قفل أثناء البث، هتلاقي أخطاء زي ERR_STREAM_PREMATURE_CLOSE — تجاهلها
     const msg = String(err?.code || err?.name || '');
     if (
       msg.includes('ERR_STREAM_PREMATURE_CLOSE') ||
@@ -105,11 +89,6 @@ async function sendAttachment(
   }
 }
 
-/* =========================================================================
-  🛡️ Rate-limit & Slowdown لنقاط التحميل
-  - لو فيه user: استخدم id، وإلا ipKeyGenerator (IPv6-safe)
-  - slowDown v2: delayMs ثابت + validate: {delayMs:false}
-   ========================================================================= */
 const downloadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -122,8 +101,8 @@ const downloadLimiter = rateLimit({
 const downloadSlow = slowDown({
   windowMs: 15 * 60 * 1000,
   delayAfter: 40,
-  delayMs: () => 250, // v2: ثابت
-  validate: { delayMs: false }, // إسكات التحذير التوافقي
+  delayMs: () => 250,
+  validate: { delayMs: false },
 });
 
 /* =========================================================================

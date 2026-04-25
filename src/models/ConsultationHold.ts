@@ -111,12 +111,10 @@ ConsultationHoldSchema.path('end').validate(function (this: IConsultationHold, v
 // ⏳ TTL على expiresAt
 ConsultationHoldSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-// ⛔️ منع حجز نفس الـslot أثناء holding فقط
+// ⛔️ منع حجز نفس الـ slot أثناء holding فقط
 ConsultationHoldSchema.index(
   { instructor: 1, start: 1, end: 1 },
   { unique: true, partialFilterExpression: { status: 'holding' } },
 );
-
-// ConsultationHoldSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IConsultationHold>('ConsultationHold', ConsultationHoldSchema);

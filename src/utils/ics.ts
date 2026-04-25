@@ -28,7 +28,7 @@ export function toICSDateUTC(d: Date): string {
   );
 }
 
-/** هروب نصوص iCal (Backslash / New lines / Commas / Semicolons) */
+/** iCal (Backslash / New lines / Commas / Semicolons) */
 export function escapeICSText(s: string | undefined): string {
   if (!s) return '';
   return s
@@ -68,8 +68,8 @@ export interface BuildICSOptions {
   attendees?: ICSAttendee[];
   alarmMinutes?: number[]; // مثال: [1440, 120]
   productId?: string; // PRODID
-  calendarName?: string; // X-WR-CALNAME (اختياري)
-  timeZone?: string; // X-WR-TIMEZONE (اختياري)
+  calendarName?: string; // X-WR-CALNAME
+  timeZone?: string; // X-WR-TIMEZONE
 }
 
 /**

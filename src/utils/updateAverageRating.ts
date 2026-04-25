@@ -1,3 +1,5 @@
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
 import { Types, Model } from 'mongoose';
 import Review from '../models/Review';
 import Book from '../models/Book';
@@ -7,7 +9,6 @@ import Research from '../models/ResearchRequest';
 
 type TargetType = 'book' | 'course' | 'consultation' | 'research';
 
-// عدّل القيمة الافتراضية لو تحب
 const DEFAULT_AVG = 5;
 
 const modelMap: Record<TargetType, Model<any>> = {
@@ -17,12 +18,6 @@ const modelMap: Record<TargetType, Model<any>> = {
   research: Research,
 };
 
-/**
- * يُعيد { avgRating, ratingsCount } بعد تحديث الهدف.
- * ملاحظات:
- * - يستخدم Aggregation داخل MongoDB لأداء أعلى.
- * - يراعي التحويل إلى ObjectId لو targetId كان string.
- */
 export async function updateAverageRating(
   targetType: TargetType,
   targetId: string | Types.ObjectId,
@@ -35,7 +30,6 @@ export async function updateAverageRating(
 
   const _id = typeof targetId === 'string' ? new Types.ObjectId(targetId) : targetId;
 
-  // احسب المتوسط والعدد على مستوى الداتابيز
   const [stat] = await Review.aggregate<{
     ratingsCount: number;
     avgRating: number;
@@ -48,7 +42,6 @@ export async function updateAverageRating(
         avgRating: { $avg: '$rating' },
       },
     },
-    // تقطيع لرقم بعُشر (1 decimal place) داخل الأجريجيشن
     {
       $project: {
         _id: 0,
@@ -62,7 +55,6 @@ export async function updateAverageRating(
     ? { avgRating: stat.avgRating, ratingsCount: stat.ratingsCount }
     : { avgRating: DEFAULT_AVG, ratingsCount: 0 };
 
-  // تحديث الهدف
   await Model.updateOne({ _id }, { $set: update }).lean();
 
   return update;

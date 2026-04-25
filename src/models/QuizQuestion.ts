@@ -1,4 +1,6 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 interface IOption {
   _id: Types.ObjectId;
@@ -18,7 +20,7 @@ export interface IQuizQuestion extends Document {
 
 const QuizQuestionSchema = new Schema<IQuizQuestion>(
   {
-    quiz: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz", required: true },
+    quiz: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz', required: true },
     question: { type: String, required: true },
     options: [
       {
@@ -30,10 +32,7 @@ const QuizQuestionSchema = new Schema<IQuizQuestion>(
     order: { type: Number, default: 0 },
     isDeleted: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model<IQuizQuestion>(
-  "QuizQuestion",
-  QuizQuestionSchema
-);
+export default mongoose.model<IQuizQuestion>('QuizQuestion', QuizQuestionSchema);

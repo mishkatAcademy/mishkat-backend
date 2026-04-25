@@ -1,12 +1,9 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // export type ReviewTargetType = "book" | "course" | "consultation" | "research";
-export const REVIEW_TARGETS = [
-  "book",
-  "course",
-  "consultation",
-  "research",
-] as const;
+export const REVIEW_TARGETS = ['book', 'course', 'consultation', 'research'] as const;
 export type ReviewTargetType = (typeof REVIEW_TARGETS)[number];
 
 export interface IReview extends Document {
@@ -22,7 +19,7 @@ export interface IReview extends Document {
 
 const reviewSchema = new Schema<IReview>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     targetId: { type: Schema.Types.ObjectId, required: true },
     targetType: {
       type: String,
@@ -32,8 +29,8 @@ const reviewSchema = new Schema<IReview>(
     rating: {
       type: Number,
       required: true,
-      min: [1, "الحد الأدنى للتقييم هو 1"],
-      max: [5, "الحد الأقصى للتقييم هو 5"],
+      min: [1, 'الحد الأدنى للتقييم هو 1'],
+      max: [5, 'الحد الأقصى للتقييم هو 5'],
       default: 5,
     },
     comment: { type: String, trim: true },
@@ -43,30 +40,30 @@ const reviewSchema = new Schema<IReview>(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // ✅ منع المستخدم من تقييم نفس الكتاب أو الكورس أو الخدمة مرتين
 reviewSchema.index({ user: 1, targetId: 1, targetType: 1 }, { unique: true });
 
-reviewSchema.virtual("target", {
+reviewSchema.virtual('target', {
   ref: (doc: any) => {
     switch (doc.targetType) {
-      case "book":
-        return "Book";
-      case "course":
-        return "Course";
-      case "consultation":
-        return "Consultation";
-      case "research":
-        return "Research";
+      case 'book':
+        return 'Book';
+      case 'course':
+        return 'Course';
+      case 'consultation':
+        return 'Consultation';
+      case 'research':
+        return 'Research';
       default:
         return null;
     }
   },
-  localField: "targetId",
-  foreignField: "_id",
+  localField: 'targetId',
+  foreignField: '_id',
   justOne: true,
 });
 
-export default mongoose.model<IReview>("Review", reviewSchema);
+export default mongoose.model<IReview>('Review', reviewSchema);

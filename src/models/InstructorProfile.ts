@@ -16,7 +16,8 @@ export interface WeeklySlot {
 }
 
 export interface AvailabilityException {
-  date: Date; // تاريخ اليوم (midnight UTC أو normalized)
+  // خلي بالك جربت ال midnight ومكانش بيظبط في التحويلات
+  date: Date; // تاريخ اليوم (12 ظهرا UTC أو normalized)
   closed?: boolean; // true = اليوم مقفول بالكامل
   slots?: DailyTimeRange[]; // فترات محددة لهذا اليوم
 }
@@ -76,7 +77,7 @@ const WeeklySlotSchema = new Schema<WeeklySlot>({
 });
 
 const AvailabilityExceptionSchema = new Schema<AvailabilityException>({
-  date: { type: Date, required: true }, // normalize في الخدمة لو تحب
+  date: { type: Date, required: true },
   closed: { type: Boolean, default: false },
   slots: { type: [DailyTimeRangeSchema], default: undefined },
 });
@@ -184,10 +185,8 @@ const InstructorProfileSchema = new Schema<IInstructorProfile>(
 
 /* ========= Validators ========= */
 
-// timeZone يجب يكون IANA صالح
 InstructorProfileSchema.path('timezone').validate(function (tz: string) {
   try {
-    // هيرمي RangeError لو غير صالح
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
     return true;
   } catch {
@@ -195,13 +194,11 @@ InstructorProfileSchema.path('timezone').validate(function (tz: string) {
   }
 }, 'Invalid IANA time zone');
 
-// weekly: صيغة صحيحة + بدون تداخل داخل نفس اليوم
 InstructorProfileSchema.path('weekly').validate(function (slots: WeeklySlot[]) {
   for (const s of slots || []) {
     if (!HHMM.test(s.start) || !HHMM.test(s.end)) return false;
     if (s.day < 0 || s.day > 6) return false;
   }
-  // تداخلات حسب اليوم
   const byDay: Record<number, DailyTimeRange[]> = {};
   for (const s of slots || []) {
     (byDay[s.day] ??= []).push({ start: s.start, end: s.end });
@@ -209,7 +206,6 @@ InstructorProfileSchema.path('weekly').validate(function (slots: WeeklySlot[]) {
   return Object.values(byDay).every((ranges) => !hasOverlaps(ranges));
 }, 'Invalid weekly slot(s): check day/start/end and overlaps');
 
-// exceptions: نفس فحوص HH:mm + بدون تداخل في نفس اليوم (لو محدد slots)
 InstructorProfileSchema.path('exceptions').validate(function (
   exps: AvailabilityException[] | undefined,
 ) {
@@ -227,14 +223,12 @@ InstructorProfileSchema.path('exceptions').validate(function (
 }, 'Invalid exception slots or overlaps');
 
 /* ========= Guards ========= */
-// تأكيد أن المستخدم المدرّس موجود وrole='instructor' وغير محذوف
 InstructorProfileSchema.pre('validate', async function (next) {
   try {
     if (this.isNew || this.isModified('user')) {
       const exists = await User.exists({ _id: this.user, role: 'instructor', isDeleted: false });
       if (!exists) return next(new Error('User must exist with role="instructor"'));
     }
-    // لو meetingMethod=manual والمدرّس active يفضّل وجود meetingUrl
     if (this.isActive && this.meetingMethod === 'manual' && !this.meetingUrl) {
       // اختياري: اعتبرها تحذير/تخطّي. لو عايزها إجبارية:
       // return next(new Error('meetingUrl is required when meetingMethod="manual" and profile is active'));

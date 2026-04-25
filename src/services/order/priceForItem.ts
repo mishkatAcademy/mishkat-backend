@@ -4,6 +4,7 @@ import Book from '../../models/Book';
 import ConsultationHold from '../../models/ConsultationHold';
 import ConsultationOffering from '../../models/ConsultationOffering';
 
+// Version II إن شاء الله
 // import Course from '../../models/Course';
 
 type ItemType = 'Book' | 'Course' | 'ConsultationHold';
@@ -26,7 +27,6 @@ function toNonNegInt(n: any, fallback = 0): number {
   return Number.isFinite(v) && v >= 0 ? Math.floor(v) : fallback;
 }
 
-/** يرجّع أقل سعر صالح بين list والسيلز، وإلا يرجّع list أو 0 كـ fallback */
 function effectiveUnitPriceHalalas(input: {
   priceHalalas?: number | null;
   salesPriceHalalas?: number | null;
@@ -37,7 +37,6 @@ function effectiveUnitPriceHalalas(input: {
   return list;
 }
 
-/** يطبّع العنوان إلى LocalizedText حتى لو جالك String */
 function toLocalizedTitle(raw: any): { ar?: string; en?: string } {
   if (raw && typeof raw === 'object' && ('ar' in raw || 'en' in raw)) {
     return raw as { ar?: string; en?: string };
@@ -48,12 +47,6 @@ function toLocalizedTitle(raw: any): { ar?: string; en?: string } {
 
 /* ================ Core ================= */
 
-/**
- * يرجّع تفاصيل التسعير لعنصر واحد:
- * - unitPriceHalalas: السعر النهائي بالهللات (دائمًا رقم)
- * - snapshot: بيانات واجهة (title, slug, image, isDigital)
- * - requiresShipping: هل يحتاج شحن (كتب ورقية فقط)
- */
 export async function priceForItem(itemType: ItemType, itemId: string): Promise<PriceItemResult> {
   switch (itemType) {
     case 'Book': {
@@ -70,7 +63,7 @@ export async function priceForItem(itemType: ItemType, itemId: string): Promise<
 
       const isDigital = Boolean((book as any).isDigital);
 
-      // (اختياري قوي) منع شراء الورقي لو المخزون 0
+      // منع شراء الورقي لو المخزون 0
       if (!isDigital) {
         const stock = Number((book as any).stock ?? 0);
         if (!Number.isFinite(stock) || stock <= 0) {

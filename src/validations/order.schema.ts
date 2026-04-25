@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const createOrderBodySchema = z.object({
   cartItemId: z.string().length(24).optional(),
-  addressId: z.string().length(24).optional(), // هنلزمه في الخدمة لو فيه عناصر تحتاج شحن
+  addressId: z.string().length(24).optional(),
   notes: z.string().max(500).optional(),
   paymentMethod: z.enum(['moyasar']).default('moyasar'), // قابل للتوسّع لاحقاً
 });

@@ -23,7 +23,7 @@
 // // ✏️ تعديل كورس
 // router.put("/:id", protect, updateCourse);
 
-// // 🗑️ حذف كورس (منطقي)
+// // 🗑️ حذف كورس
 // router.delete("/:id", protect, deleteCourse);
 
 // export default router;

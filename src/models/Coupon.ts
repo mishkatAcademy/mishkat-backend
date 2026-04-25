@@ -1,10 +1,11 @@
-import mongoose, { Schema, Document } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICoupon extends Document {
   code: string;
-  discountType: "percentage" | "fixed";
+  discountType: 'percentage' | 'fixed';
   discountValue: number;
-  appliesTo: ("course" | "book" | "consultation" | "research" | "all")[];
+  appliesTo: ('course' | 'book' | 'consultation' | 'research' | 'all')[];
   maxUsage: number;
   usedCount: number;
   isActive: boolean;
@@ -19,14 +20,14 @@ const CouponSchema = new Schema<ICoupon>(
     code: { type: String, required: true, unique: true },
     discountType: {
       type: String,
-      enum: ["percentage", "fixed"],
+      enum: ['percentage', 'fixed'],
       required: true,
     },
     discountValue: { type: Number, required: true },
     appliesTo: {
       type: [String],
-      enum: ["course", "book", "consultation", "research", "all"],
-      default: ["all"],
+      enum: ['course', 'book', 'consultation', 'research', 'all'],
+      default: ['all'],
     },
     maxUsage: { type: Number, default: 1 },
     usedCount: { type: Number, default: 0 },
@@ -36,7 +37,7 @@ const CouponSchema = new Schema<ICoupon>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model<ICoupon>("Coupon", CouponSchema);
+export default mongoose.model<ICoupon>('Coupon', CouponSchema);

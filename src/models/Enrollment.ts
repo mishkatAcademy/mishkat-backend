@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IEnrollment extends Document {
   student: Types.ObjectId;
@@ -15,12 +16,12 @@ const EnrollmentSchema: Schema = new Schema<IEnrollment>(
   {
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+      ref: 'Course',
       required: true,
     },
     enrolledAt: { type: Date, default: Date.now },
@@ -30,10 +31,10 @@ const EnrollmentSchema: Schema = new Schema<IEnrollment>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // ✅ منع تكرار اشتراك نفس الطالب في نفس الكورس
 EnrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
 
-export default mongoose.model<IEnrollment>("Enrollment", EnrollmentSchema);
+export default mongoose.model<IEnrollment>('Enrollment', EnrollmentSchema);

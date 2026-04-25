@@ -63,12 +63,8 @@ const ConsultationOfferingSchema = new Schema<IConsultationOffering>(
   },
 );
 
-// فهارس مفيدة (قوائم بالأنواع + الترتيب + الحالة)
 ConsultationOfferingSchema.index({ type: 1, isActive: 1, order: 1 });
 ConsultationOfferingSchema.index({ type: 1, durationMinutes: 1, isActive: 1 });
-
-// (اختياري) فهرس نصي مبسّط للبحث بالعنوان
-// ConsultationOfferingSchema.index({ 'title.ar': 'text', 'title.en': 'text' }, { default_language: 'none' });
 
 ConsultationOfferingSchema.virtual('priceSAR').get(function (this: any) {
   return typeof this.priceHalalas === 'number' ? this.priceHalalas / 100 : undefined;

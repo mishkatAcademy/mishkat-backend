@@ -14,16 +14,9 @@ const router = Router();
 
 router.use(protect, isAdmin);
 
-/**
- * PATCH /admin/me
- * multipart/form-data:
- *  - avatar (file) optional
- *  - firstName optional
- *  - lastName optional
- */
 router.patch(
   '/me',
-  uploadAvatarDisk, // ✅ لازم قبل validate
+  uploadAvatarDisk,
   validateRequestBody(adminUpdateMeBodySchema),
   adminUpdateMeCtrl,
 );

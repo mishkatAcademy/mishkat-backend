@@ -1,4 +1,6 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface ILesson extends Document {
   title: string;
@@ -18,7 +20,7 @@ const LessonSchema: Schema = new Schema<ILesson>(
     title: { type: String, required: true },
     module: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Module",
+      ref: 'Module',
       required: true,
     },
     videoUrl: { type: String },
@@ -30,7 +32,7 @@ const LessonSchema: Schema = new Schema<ILesson>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model<ILesson>("Lesson", LessonSchema);
+export default mongoose.model<ILesson>('Lesson', LessonSchema);

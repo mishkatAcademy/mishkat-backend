@@ -31,7 +31,7 @@ export interface Attachment {
   storedName: string;
   mimeType: string;
   size: number; // bytes
-  relativePath: string; // مثال: uploads/research/<userId>/<file>
+  relativePath: string;
   url: string;
 }
 
@@ -49,7 +49,6 @@ export interface IResearchRequest extends Document {
   researchTitle: string;
   description?: string;
 
-  /** تاريخ فقط بصيغة YYYY-MM-DD (توقيت الرياض) */
   proposedDueDate: string;
 
   attachments: Attachment[];
@@ -118,7 +117,7 @@ const ResearchRequestSchema = new Schema<IResearchRequest>(
     researchTitle: { type: String, required: true, trim: true },
     description: { type: String },
 
-    proposedDueDate: { type: String, required: true }, // "YYYY-MM-DD" كما اتفقنا
+    proposedDueDate: { type: String, required: true },
 
     attachments: { type: [AttachmentSchema], default: [] },
 

@@ -24,35 +24,29 @@ export const registerService = async ({
   lastName,
   email,
   password,
-  role, // هنطنّشه هنا لأمان أعلى، ما نديش role من الـ register
+  role,
   avatarUrl,
   avatarRelPath,
 }: RegisterInput): Promise<{ wasRestored: boolean }> => {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // 1) هل يوجد مستخدم بنفس الإيميل (سواء active أو soft-deleted)؟
   const existing = await User.findOne({ email: normalizedEmail }).select(
     '+emailOtpCode +resetOtpCode',
   );
 
-  // 2) توليد OTP
   const { code, expiresAt } = generateOtp({ minutes: 10 });
   const hash = await hashOtp(code);
 
-  // 3) لو موجود ومش محذوف → ممنوع التسجيل بنفس الإيميل
   if (existing && !existing.isDeleted) {
     throw new AppError('البريد الإلكتروني مستخدم من قبل', 409);
   }
 
-  // 4) لو موجود وهو soft-deleted → إعادة إحياء الحساب وتحديث بياناته
   if (existing && existing.isDeleted) {
     existing.firstName = firstName.trim();
     existing.lastName = lastName.trim();
 
-    // نعتبر إن التسجيل الجديد = باسورد جديدة
     existing.password = password;
 
-    // تحديث الأفاتار لو جاي من الفورم
     if (avatarUrl) {
       existing.avatarUrl = avatarUrl;
       existing.avatarRelPath = avatarRelPath;
@@ -60,12 +54,10 @@ export const registerService = async ({
 
     existing.isDeleted = false;
 
-    // نرجّع فلو تفعيل الإيميل من الأول
     existing.isEmailVerified = false;
     existing.emailOtpCode = hash;
     existing.emailOtpExpires = expiresAt;
 
-    // تنظيف أي reset OTP قديمة
     existing.resetOtpCode = undefined;
     existing.resetOtpExpires = undefined;
 
@@ -75,7 +67,6 @@ export const registerService = async ({
     return { wasRestored: true };
   }
 
-  // 5) لا يوجد مستخدم بهذا الإيميل → إنشاء جديد
   await User.create({
     firstName: firstName.trim(),
     lastName: lastName.trim(),
@@ -172,8 +163,6 @@ export const loginService = async ({ email, password }: LoginInput, res: Respons
     email: user.email,
     role: user.role,
     avatarUrl: user.avatarUrl,
-    // اختياري: لو حابب تفضل تستخدم avatar في الفرونت:
-    // avatar: user.avatarUrl,
   };
 };
 
@@ -189,7 +178,7 @@ export const refreshTokenService = async (token: string, res: Response) => {
   const user = await User.findById(userId);
   if (!user || user.isDeleted) throw new AppError('المستخدم غير موجود أو محذوف', 404);
 
-  // أنشئ Access جديد
+  // إنشاء Access جديد
   const access = createAccessToken(
     String(user._id),
     user.role,
@@ -197,7 +186,6 @@ export const refreshTokenService = async (token: string, res: Response) => {
     env.ACCESS_TOKEN_EXPIRES_IN as ExpiresIn,
   );
 
-  // أعد وضع الكوكيز (refresh نفسه بدون تغيير)
   setAuthCookies(res, access.token, token);
 };
 
@@ -227,7 +215,7 @@ export const getMeService = async (userId: string) => {
 
 /* ================================ Logout ============================== */
 export const logoutService = (res: Response) => {
-  clearAuthCookies(res); // يستخدم أسماء الكوكيز الموحّدة وقيم sameSite/secure من env
+  clearAuthCookies(res);
 };
 
 /* ============================ Forgot Password ========================= */
@@ -245,6 +233,7 @@ export const forgotPasswordService = async (email: string) => {
   user.resetOtpExpires = expiresAt;
   await user.save();
 
+  // تم حذف الدالة -- كانت تستخدم للتجربة في الديف
   // printOtpToConsole(normalizedEmail, code, 'reset');
   await sendPasswordResetOtp(normalizedEmail, code);
 };

@@ -14,7 +14,6 @@ export interface SignedToken {
   expiresAtMs: number;
 }
 
-// جهة الإصدار والجمهور (ثوابت مفيدة للتحقق/التنظيم)
 const ISSUER = 'mishkat.api';
 const AUDIENCE = 'mishkat.app';
 
@@ -80,9 +79,6 @@ export function verifyJwt<T extends JwtPayload = JwtPayload>(
   return jwt.verify(token, secret, opts) as T;
 }
 
-/**
- * 👀 فكّ JWT بدون تحقق توقيع (استخدمه بحذر)
- */
 export function decodeJwt<T = any>(token: string): T | null {
   return jwt.decode(token) as T | null;
 }

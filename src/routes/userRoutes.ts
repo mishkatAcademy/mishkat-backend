@@ -25,7 +25,7 @@ import {
 } from '../validations/user.schema';
 
 import { validateRequestBody, validateRequestParams, validateQuery } from '../middlewares/validate';
-import { uploadAvatarDisk } from '../middlewares/upload.disk'; // ✅ جديد
+import { uploadAvatarDisk } from '../middlewares/upload.disk';
 
 const router = express.Router();
 
@@ -45,7 +45,7 @@ router.patch('/me/change-password', validateRequestBody(changePasswordSchema), c
 // 🗑 حذف حسابي
 router.delete('/me', deleteMyAccount);
 
-// 👑 ما بعد هذا السطر للأدمن فقط
+// 👑 الأدمن فقط
 router.use(isAdmin);
 
 router.get('/', getAllUsers);

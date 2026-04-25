@@ -15,7 +15,7 @@ export interface IUser extends Document {
   password: string;
 
   // Avatar (طبقًا لنظام الرفع الجديد)
-  avatarUrl?: string; // رابط عام يستخدمه الفرونت
+  avatarUrl?: string; // رابط عام علشان الفرونت
   avatarRelPath?: string; // مسار داخلي تحت uploads/... للحذف فقط
 
   isEmailVerified: boolean;
@@ -30,7 +30,6 @@ export interface IUser extends Document {
 
   sessions: {
     consultations: (mongoose.Types.ObjectId | IConsultationBooking)[];
-    // مخلّي الاسم كما هو "researchs" علشان ما نكسرش أي كود لحد ما نراجع الموديول ده
     researchs: (mongoose.Types.ObjectId | IResearchRequest)[];
   };
 
@@ -65,12 +64,11 @@ const UserSchema: Schema<IUser> = new Schema(
       unique: true,
       index: true,
       trim: true,
-      lowercase: true, // تطبيع الإيميل
+      lowercase: true,
     },
 
     password: { type: String, required: true, select: false },
 
-    // 🖼 Avatar (طبقًا لسير الرفع الجديد)
     avatarUrl: { type: String },
     avatarRelPath: { type: String },
 
@@ -90,7 +88,6 @@ const UserSchema: Schema<IUser> = new Schema(
     courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
 
     sessions: {
-      // ✅ ref مطابق لاسم الموديل الفعلي المتوقع
       consultations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ConsultationBooking' }],
       researchs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ResearchRequest' }],
     },
@@ -118,7 +115,6 @@ const UserSchema: Schema<IUser> = new Schema(
         delete ret.password;
         delete ret.emailOtpCode;
         delete ret.resetOtpCode;
-        // قيم داخلية للسيرفر فقط
         delete ret.avatarRelPath;
         return ret;
       },
@@ -155,7 +151,6 @@ UserSchema.virtual('fullName').get(function (this: IUser) {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// ✅ Indexes مساعدة (بالإضافة لـ unique اللي فوق)
 UserSchema.index({ isDeleted: 1 });
 
 export default mongoose.model<IUser>('User', UserSchema);

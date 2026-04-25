@@ -171,10 +171,6 @@ export const listInstructorsAdminQuerySchema = z.object({
   sort: z.string().optional().default('createdAt:desc'),
 });
 
-/* =========================================================
-✅ إضافات جديدة للـ 7 endpoints (لن تُلغي الموجود)
-========================================================= */
-
 export const weeklyItemIdParamsSchema = z.object({
   itemId: z.string().length(24, 'Invalid itemId'),
 });
@@ -192,7 +188,6 @@ export const updateWeeklyItemBodySchema = z
     const hasStart = typeof v.start === 'string';
     const hasEnd = typeof v.end === 'string';
 
-    // لو واحد موجود والتاني مش موجود => غلط
     if (hasStart !== hasEnd) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

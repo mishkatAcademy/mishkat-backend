@@ -41,8 +41,8 @@ export interface OrderItemSnapshot {
   title: LocalizedText;
   slug?: string;
   image?: string;
-  // type-specific (نستخدمهم عشان الشحن والديجيتال)
-  isDigital?: boolean; // للكتب والكورسات مثلاً
+  // type-specific عشان الشحن
+  isDigital?: boolean;
 
   cartItemId?: string;
   holdId?: string;
@@ -74,7 +74,7 @@ export interface AddressSnapshot {
 
 export interface PaymentInfo {
   provider: 'moyasar'; // لحد دلوقتي
-  paymentId?: string; // id من مزود الدفع (unique)
+  paymentId?: string; // id من مزود الدفع
   status: 'pending' | 'paid' | 'failed';
   amountHalalas: number; // المبلغ المطلوب دفعه
   currency: 'SAR';
@@ -99,8 +99,8 @@ export interface IOrder extends Document {
   items: OrderItem[];
 
   // لقواعد الشحن والفوترة
-  addressRef?: Types.ObjectId; // 👈 ربط اختياري بعنوان المستخدم وقت الشراء
-  address?: AddressSnapshot; // 👈 السnapshot ثابتة
+  addressRef?: Types.ObjectId;
+  address?: AddressSnapshot;
 
   totals: Totals;
 
@@ -108,7 +108,6 @@ export interface IOrder extends Document {
 
   notes?: string;
 
-  // أي بيانات إضافية للوفاء/التسليم
   fulfillment?: {
     status: 'none' | 'pending' | 'shipped' | 'delivered';
     shippedAt?: Date;
@@ -216,7 +215,7 @@ const TotalsSchema = new Schema<Totals>(
 const PaymentInfoSchema = new Schema<PaymentInfo>(
   {
     provider: { type: String, enum: ['moyasar'], required: true },
-    paymentId: { type: String, index: true, sparse: true, unique: true }, // يمنع تكرار نفس الدفع
+    paymentId: { type: String, index: true, sparse: true, unique: true },
     status: {
       type: String,
       enum: ['pending', 'paid', 'failed'],
@@ -252,7 +251,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     currency: { type: String, enum: ['SAR'], default: 'SAR' },
     items: { type: [OrderItemSchema], required: true },
-    addressRef: { type: Schema.Types.ObjectId, ref: 'Address' }, // optional
+    addressRef: { type: Schema.Types.ObjectId, ref: 'Address' },
     address: { type: AddressSnapshotSchema, required: false },
     totals: { type: TotalsSchema, required: true },
     payment: { type: PaymentInfoSchema, required: true },
@@ -267,7 +266,6 @@ const OrderSchema = new Schema<IOrder>(
   { timestamps: true },
 );
 
-// فهارس مفيدة
 OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
 

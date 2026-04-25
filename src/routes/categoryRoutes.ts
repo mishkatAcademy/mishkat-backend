@@ -41,18 +41,4 @@ router.patch(
   restoreCategoryCtrl,
 );
 
-// ❌ شِلت Route /search لتفادي التعارض مع validate + searchMiddleware
-// // 🔍 بحث سريع (Regex OR على حقول محددة)
-// // مثال: GET /api/v1/categories/search?searchTerm=math&scope=book&nonEmpty=true
-// router.get(
-//   '/search',
-//   validateQuery(categoryQuerySchema),
-//   searchMiddleware({
-//     model: Category,
-//     // nested fields → cast to any لتجاوز keyof
-//     fields: ['slug', 'title.ar', 'title.en', 'description.ar', 'description.en'] as any,
-//     defaultFilters: { isDeleted: false },
-//   }),
-// );
-
 export default router;

@@ -68,8 +68,7 @@ export async function createResearchRequestService({ userId, body, files }: Crea
       storedName: s.filename,
       mimeType: files[idx].mimetype,
       size: s.size,
-      relativePath: s.relPath, // ✅ ده اللي يتحفظ في DB
-      // (اختياري) url: s.url
+      relativePath: s.relPath,
     }));
 
     moved.push(...stored.map((s) => ({ relPath: s.relPath })));
@@ -91,7 +90,7 @@ export async function createResearchRequestService({ userId, body, files }: Crea
         mimeType: files[idx].mimetype,
         size: s.size,
         relativePath: s.relPath,
-        url: 'pending', // مؤقت
+        url: 'pending',
       })),
       status: 'new',
     });
@@ -104,7 +103,6 @@ export async function createResearchRequestService({ userId, body, files }: Crea
     await doc.save();
     return doc.toJSON();
   } catch (err) {
-    // ✅ Rollback: لو نقلنا ملفات وبعدين حصل error في DB
     await Promise.all(moved.map((m) => deleteLocalByRelPath(m.relPath)));
     throw err;
   }

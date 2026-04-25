@@ -11,7 +11,7 @@
  *
  * 🧠 ملاحظات:
  * - نحن نفترض أن Asia/Riyadh = UTC+3 دون تغيير (لا توقيت صيفي).
- * - جميع الدوال تُرجع كائنات Date في التوقيت العالمي UTC، بما يتوافق مع التخزين/المقارنة في Mongo.
+ * - جميع الدوال تُرجع كائنات Date في التوقيت العالمي UTC.
  */
 
 export type Slot = { start: Date; end: Date };
@@ -50,26 +50,11 @@ function riyadhNoonUTC(dateStr: string): Date {
   return new Date(ms);
 }
 
-/** يعيد Date في UTC تمثّل منتصف الليل المحلي بالرياض لهذا التاريخ "YYYY-MM-DD" */
-// واضح إنها مش شغالة مظبوط
-// function riyadhMidnightUTC(dateStr: string): Date {
-//   const [y, m, d] = dateStr.split('-').map(Number);
-//   if (!y || !m || !d) throw new Error(`Invalid date YYYY-MM-DD: ${dateStr}`);
-//   // 00:00 (الرياض) = 21:00 (اليوم السابق) UTC → نطرح 3 ساعات
-//   const ms = Date.UTC(y, m - 1, d, 0 - RIYADH_OFFSET_MIN / 60, 0, 0, 0);
-//   return new Date(ms);
-// }
-
 /**
  * يحسب اليوم 0..6 بحيث:
  * 0=السبت, 1=الأحد, 2=الاثنين, 3=الثلاثاء, 4=الأربعاء, 5=الخميس, 6=الجمعة
  * (باستخدام منتصف الليل المحلي للرياض)
  */
-// export function dayIndexSaturday0(dateStr: string): number {
-//   const midnight = riyadhMidnightUTC(dateStr);
-//   const jsSunday0 = midnight.getUTCDay(); // 0=Sunday..6=Saturday
-//   return (jsSunday0 + 1) % 7; // يحوّله إلى 0=Saturday..6=Friday
-// }
 export function dayIndexSaturday0(dateStr: string): number {
   const noon = riyadhNoonUTC(dateStr);
   const jsSunday0 = noon.getUTCDay(); // 0=Sunday..6=Saturday (but now correct day)
@@ -132,6 +117,5 @@ export function generateSlotsForWindow(
 
 /** هل يوجد تداخل زمني بين [aStart,aEnd) و [bStart,bEnd) ؟ */
 export function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
-  // تداخل حقيقي (ليس تلامس الحواف)
   return aStart < bEnd && bStart < aEnd;
 }

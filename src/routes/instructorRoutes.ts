@@ -77,9 +77,6 @@ router.delete(
   deleteMyExceptionCtrl,
 );
 
-/* =========================================================
-✅ NEW: 7 endpoints (إضافات بدون إلغاء القديم)
-========================================================= */
 // 1) add weekly item
 router.post('/me/weekly/items', validateRequestBody(addWeeklyItemBodySchema), addWeeklyItemCtrl);
 
@@ -124,18 +121,21 @@ router.get(
 router.get('/me/offerings', validateQuery(myOfferingsQuerySchema), listMySupportedOfferingsCtrl);
 
 /* راوت مؤقت لإضافة id لعناصر ال weekly القديمة */
+// تم إلغاؤه
 // router.post('/me/weekly/rehydrate', rehydrateMyWeeklyCtrl);
 
 /** 👑 Admin */
 router.use(protect, isAdmin);
 
 // إنشاء بروفايل
+// ليس له UI
 router.post('/', validateRequestBody(createInstructorProfileSchema), adminCreateInstructorCtrl);
 
 // قائمة المدرّسين
 router.get('/', validateQuery(listInstructorsAdminQuerySchema), listInstructorsAdminCtrl);
 
 // بروفايل واحد
+// userId not instructorId
 router.get(
   '/:userId',
   validateRequest({ params: instructorIdParamsSchema }),

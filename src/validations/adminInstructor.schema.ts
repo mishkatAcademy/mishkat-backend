@@ -94,7 +94,5 @@ export const adminCreateInstructorSchema = z
         }),
       )
       .optional(),
-
-    // exceptions اختياري… (يفضل atomic endpoints بعدين)
   })
   .strict();

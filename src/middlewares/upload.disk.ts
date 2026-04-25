@@ -27,27 +27,18 @@ export interface FieldRule {
   name: string;
   mode: FieldMode;
   maxCount?: number;
-  maxSizeMB?: number; // حد لكل ملف في هذا الحقل
-  allowed: Set<string>; // MIME types المسموح بها
+  maxSizeMB?: number;
+  allowed: Set<string>;
 }
 
 export interface UploaderConfig {
   fields: FieldRule[];
-  globalMaxFiles?: number; // حد عام لعدد الملفات في الـ request
-  globalMaxSizeMB?: number; // حد عام لحجم الملف الواحد عند مستوى Multer
+  globalMaxFiles?: number;
+  globalMaxSizeMB?: number;
 }
 
 const bytes = (mb: number) => Math.floor(mb * 1024 * 1024);
 
-/**
- * ميدل وير عام:
- * - يرفع على القرص في uploads_tmp
- * - يتحقق من:
- *   - أسماء الحقول (field names)
- *   - MIME types المسموحة
- *   - الحد الأقصى للحجم (global + per-field)
- *   - الحد الأقصى لعدد الملفات
- */
 export function makeDiskUploadParser(cfg: UploaderConfig): RequestHandler {
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TEMP_UPLOAD_DIR),
@@ -94,7 +85,6 @@ export function makeDiskUploadParser(cfg: UploaderConfig): RequestHandler {
   }));
   const parse = upload.fields(spec);
 
-  // Post-validate: التحقق من maxSizeMB لكل حقل بدقة
   const postValidate: RequestHandler = (req, _res, next) => {
     const filesByField = (req.files || {}) as Record<string, Express.Multer.File[]>;
 
@@ -118,32 +108,15 @@ export function makeDiskUploadParser(cfg: UploaderConfig): RequestHandler {
     }
   };
 
-  // Compose: parse → postValidate
   return (req, res, next) =>
     parse(req, res, (err?: any) => (err ? next(err) : postValidate(req, res, next)));
 }
 
-/* =======================
- * Ready-made uploaders
- * ======================= */
-
-/**
- * Avatar:
- * - field: avatar
- * - نوع: صورة واحدة
- * - الحجم: max 5MB
- * - المرحلة دي بس في uploads_tmp (التخزين النهائي هيتم في controller عن طريق moveDiskFileToUploads)
- */
 export const uploadAvatarDisk = makeDiskUploadParser({
   fields: [{ name: 'avatar', mode: 'single', allowed: IMAGE_MIME, maxSizeMB: 5 }],
   globalMaxSizeMB: 6,
 });
 
-/**
- * كتاب (PDF + cover):
- * - pdf: 100MB
- * - cover: 5MB
- */
 export const uploadBookAssetsDisk = makeDiskUploadParser({
   fields: [
     { name: 'pdf', mode: 'single', allowed: PDF_MIME, maxSizeMB: 100 },
@@ -152,13 +125,6 @@ export const uploadBookAssetsDisk = makeDiskUploadParser({
   globalMaxSizeMB: 110,
 });
 
-/**
- * ملفات الأبحاث:
- * - field: files
- * - maxCount: 5
- * - الأنواع: PDF / DOC / DOCX
- * - الحجم لكل ملف: 10MB
- */
 export const uploadResearchFilesDisk = makeDiskUploadParser({
   fields: [
     {

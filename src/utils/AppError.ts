@@ -10,8 +10,8 @@ export class AppError extends Error {
   public status: AppErrorStatus;
   public isOperational: boolean;
   public code?: string; // كود داخلي اختياري (E_NOT_FOUND, ...)
-  public cause?: unknown; // Node 16+ يدعم cause
-  public details?: unknown; // تفاصيل إضافية (مثلاً issues بتاعة Zod)
+  public cause?: unknown;
+  public details?: unknown;
 
   constructor(
     message: string,
@@ -28,7 +28,6 @@ export class AppError extends Error {
     this.cause = options?.cause;
     this.details = options?.details;
 
-    // إصلاح سلسلة الوراثة في TS
     Object.setPrototypeOf(this, new.target.prototype);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
@@ -41,7 +40,6 @@ export class AppError extends Error {
     return this;
   }
 
-  /** تمثيل JSONي آمن */
   toJSON() {
     return {
       name: this.name,

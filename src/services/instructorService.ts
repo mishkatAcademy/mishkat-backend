@@ -133,7 +133,6 @@ function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
 
   const displayNameObj = p.displayName as Localized | undefined;
 
-  // ✅ إخفاء الاستثناءات الماضية قبل اليوم الحالي بتوقيت الرياض
   const todayYMD = toRiyadhYMD(new Date());
   const visibleExceptions = Array.isArray(p.exceptions)
     ? p.exceptions.filter((e: any) => toRiyadhYMD(e.date) >= todayYMD)
@@ -143,7 +142,6 @@ function toInstructorDTO(p: any, opts?: { includeUser?: boolean }) {
     id: String(p._id),
     userId: String(user?._id ?? p.user),
 
-    // ✅ بنرجّع object كما هو (LocalizedText)
     displayName: displayNameObj,
     headline: p.headline,
     bio: p.bio,
@@ -219,6 +217,7 @@ export async function adminCreateInstructorProfile(input: CreateInput) {
     maxAdvanceDays: input.maxAdvanceDays ?? 30,
     rescheduleWindowHours: input.rescheduleWindowHours ?? 12,
     weekly: input.weekly ?? [],
+    // تم تعديلها للتحكم في عرضها
     // exceptions: input.exceptions,
     exceptions: normalizeExceptions(input.exceptions),
     meetingMethod: input.meetingMethod ?? 'manual',
@@ -301,7 +300,7 @@ export async function listInstructorsAdmin(input: {
   type?: SupportedType;
   activeOnly?: boolean;
   search?: string;
-  sort?: string; // "createdAt:desc,displayName:asc"
+  sort?: string;
 }) {
   const page = Math.max(1, input.page || 1);
   const limit = Math.min(100, Math.max(1, input.limit || 10));
@@ -572,8 +571,6 @@ export async function instructorSetDayOff(userId: string, dateYMD: string) {
 /* =========================================================
 (5) Add exception in day (slots or closed)
 PUT /instructors/me/exceptions/:dateYMD
-(موجود عندك بالفعل instructorUpsertMyException)
-=> هنسيبه، لكن ده endpoint إضافي مختلف؟ لا — هنستخدم نفس الموجود
 ========================================================= */
 
 /* =========================================================
@@ -645,6 +642,7 @@ export async function instructorAddSlotsToDay(
   return toDTOWithUser(prof);
 }
 
+// لم تعد مستخدمة -- سايبها للذكرى
 /* سيرفيس مؤقتة لإضافة id لعناصر ال weekly القديمة */
 export async function instructorRehydrateMyWeekly(userId: string) {
   const prof = await InstructorProfile.findOne({ user: userId });
@@ -661,7 +659,6 @@ export async function instructorRehydrateMyWeekly(userId: string) {
     return toInstructorDTO(populated.toObject(), { includeUser: true });
   }
 
-  // ✅ force re-assign to trigger subdoc id creation
   prof.weekly = weekly.map((w) => ({ day: w.day, start: w.start, end: w.end })) as any;
   prof.markModified('weekly');
   await prof.save();

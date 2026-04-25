@@ -39,7 +39,6 @@ export const createResearchBodySchema = z.object({
   researchTitle: z.string().min(2).max(300),
   description: z.string().max(5000).optional(),
 
-  // تاريخ فقط "YYYY-MM-DD" كما طلبت
   proposedDueDate: z.string().regex(ymd, 'صيغة التاريخ يجب أن تكون YYYY-MM-DD'),
 });
 
@@ -47,13 +46,12 @@ export const idParamSchema = z.object({
   id: z.string().length(24, 'Invalid id'),
 });
 
-/** المستخدم */
 export const myListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
 });
 
-/** الإدمن */
+/** الأدمن */
 export const adminListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),

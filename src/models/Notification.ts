@@ -1,4 +1,6 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface INotification extends Document {
   user: Types.ObjectId;
@@ -13,7 +15,7 @@ export interface INotification extends Document {
 
 const NotificationSchema = new Schema<INotification>(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     message: { type: String, required: true },
     link: { type: String },
@@ -22,10 +24,7 @@ const NotificationSchema = new Schema<INotification>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model<INotification>(
-  "Notification",
-  NotificationSchema
-);
+export default mongoose.model<INotification>('Notification', NotificationSchema);

@@ -1,3 +1,5 @@
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
 import Review from '../models/Review';
 import { updateAverageRating } from '../utils/updateAverageRating';
 import { ReviewTargetType } from '../models/Review';

@@ -10,10 +10,8 @@ export interface RegisterInput {
   email: string;
   password: string;
 
-  // ممكن تخليها اختيارية لو حابب تتحكم من الـ Admin panel بعدين
   role?: Role;
 
-  // Avatar طبقًا لنظام الرفع الجديد
   avatarUrl?: string; // رابط عام يوصله الفرونت
   avatarRelPath?: string; // المسار الداخلي تحت uploads/... للحذف فقط
 }
@@ -54,45 +52,3 @@ export interface RefreshTokenPayload {
   iat?: number;
   exp?: number;
 }
-
-// /** زوج التوكينات اللي الـ API بيرجّعهم بعد نجاح تسجيل/تجديد */
-// export interface TokenPair {
-//   accessToken: string;
-//   refreshToken: string;
-//   /** قيم اختيارية لو حابب ترجعها للفرونت */
-//   accessTokenExpiresIn?: string; // "15m"
-//   refreshTokenExpiresIn?: string; // "7d"
-// }
-
-// /** الرد القياسي لعمليات التسجيل/تسجيل الدخول */
-// export interface AuthResponse {
-//   user: AuthUserDTO;
-//   tokens: TokenPair;
-// }
-
-// /** تجديد التوكين */
-// export interface RefreshTokenInput {
-//   refreshToken: string;
-// }
-
-// /** نسيان كلمة المرور */
-// export interface ForgotPasswordInput {
-//   email: string;
-// }
-
-// /** إعادة تعيين كلمة المرور */
-// export interface ResetPasswordInput {
-//   token: string; // توكين الإعادة (من الإيميل)
-//   newPassword: string;
-// }
-
-// /** تغيير كلمة المرور (وأنت مُسجّل دخول) */
-// export interface ChangePasswordInput {
-//   currentPassword: string;
-//   newPassword: string;
-// }
-
-// /** توثيق البريد (اختياري لو عندك Confirm Email) */
-// export interface VerifyEmailInput {
-//   token: string;
-// }

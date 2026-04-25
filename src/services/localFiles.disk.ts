@@ -8,7 +8,7 @@ import { env } from '../config/env';
 
 export const UPLOAD_ROOT = path.resolve(process.cwd(), 'uploads');
 
-// APP_BASE_URL من env.ts (مثلاً: https://api.mishkat.academy)
+// (https://api.mishkat.academy)
 const BASE_URL = env.APP_BASE_URL.replace(/\/+$/, '');
 
 function yyyymm(d: Date = new Date()) {
@@ -41,7 +41,6 @@ function pickExt(originalName: string, mimeType?: string) {
   return ext || '';
 }
 
-/** SHA1 hash لأول 16 حرف بناءً على محتوى الملف (على القرص) */
 async function sha1OfFile(filePath: string) {
   const hash = crypto.createHash('sha1');
   const fh = await fs.open(filePath, 'r');
@@ -90,7 +89,6 @@ export async function moveDiskFileToUploads(
 
   const finalAbs = path.join(absDir, filename);
 
-  // rename مع fallback لـ EXDEV (لو أقراص مختلفة)
   try {
     await fs.rename(file.path, finalAbs);
   } catch (err: any) {
@@ -117,7 +115,6 @@ export async function moveDiskFileToUploads(
   };
 }
 
-/** تحويل relPath إلى مسار مطلق على القرص (مفيد للـ download المحمي) */
 export function getAbsolutePath(relPath: string) {
   return path.join(UPLOAD_ROOT, relPath);
 }
@@ -128,7 +125,5 @@ export async function deleteLocalByRelPath(relPath?: string | null) {
   const abs = path.join(UPLOAD_ROOT, relPath);
   try {
     await fs.unlink(abs);
-  } catch {
-    // تجاهل لو مش موجود
-  }
+  } catch {}
 }

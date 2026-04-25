@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middlewares/authMiddleware'; // تأكد الاسم/المسار
+import { protect } from '../middlewares/authMiddleware';
 import {
   validateRequest,
   validateRequestBody,
@@ -46,12 +46,7 @@ router.patch(
 );
 
 /** تعيين كافتراضي */
-router.patch(
-  '/:id/default',
-  validateRequestParams(addressIdParamsSchema),
-  // أو لو عايز body: validateRequest(setDefaultAddressSchema مضمنة)
-  setDefaultAddress,
-);
+router.patch('/:id/default', validateRequestParams(addressIdParamsSchema), setDefaultAddress);
 
 /** حذف عنوان (Soft) */
 router.delete('/:id', validateRequestParams(addressIdParamsSchema), deleteAddress);

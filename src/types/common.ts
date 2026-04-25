@@ -36,9 +36,9 @@ export interface FileMeta {
 
 /* ================= Pagination Helpers ================= */
 export interface PaginationParams {
-  page?: number; // 1-based
-  limit?: number; // per page
-  sort?: string; // e.g. "-createdAt"
+  page?: number;
+  limit?: number;
+  sort?: string;
 }
 
 export interface PaginationMeta {

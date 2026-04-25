@@ -98,10 +98,8 @@ export function fetchDoc<T extends object>(
         (res as any).locals.docs[attachKey] = doc;
       }
 
-      // ♻️ (توافق خلفي اختياري) تعليق على req[attachKey] لو الاسم غير محجوز
       if (compatAttachOnReq) {
         if (RESERVED_REQ_KEYS.has(attachKey)) {
-          // منعنا الكتابة على خصائص حساسة (زي query/params/headers)
           return next(
             AppError.internal(
               `fetchDoc: attachKey '${attachKey}' is reserved — use req.ctx['${attachKey}'] instead`,
@@ -114,7 +112,6 @@ export function fetchDoc<T extends object>(
 
       next();
     } catch (err: any) {
-      // احتياط في حال CastError من مكان آخر
       if (err?.name === 'CastError') {
         return next(AppError.badRequest('Invalid id', 'E_INVALID_ID'));
       }
@@ -122,21 +119,3 @@ export function fetchDoc<T extends object>(
     }
   };
 }
-
-/* ----------------------------------------------------------------------
- * 💡 ملاحظات استخدام:
- *
- * 1) القراءة في الكونترولر:
- *    const category = req.ctx?.category;                 // المفضّل
- *    const sameCat = res.locals.docs?.category;          // بديل
- *    // (لو مفعّل compatAttachOnReq):
- *    const legacyCat = (req as any).category;            // توافق خلفي
- *
- * 2) أمثلة:
- *    import { Category } from '../models/Category';
- *    router.get('/:id', fetchDoc(Category, { filter: { isDeleted: { $ne: true } } }), ctrl.getById);
- *
- * 3) تحذير:
- *    - تجنّب تعيين attachKey لأسماء محجوزة مثل: "query", "params", "headers"... إلخ.
- *    - في حال الإصرار على نفس الاسم لأسباب قديمة، عطّل compatAttachOnReq واستخدم req.ctx فقط.
- * -------------------------------------------------------------------- */

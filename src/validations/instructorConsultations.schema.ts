@@ -8,8 +8,7 @@ export const instructorMyConsultationsQuerySchema = z
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
 
-    status: z.enum(['confirmed', 'completed', 'cancelled', 'refunded']).optional(), // لو مش موجود => كل الحالات
-
+    status: z.enum(['confirmed', 'completed', 'cancelled', 'refunded']).optional(),
     from: z.string().regex(YMD, 'Invalid from (YYYY-MM-DD)').optional(),
     to: z.string().regex(YMD, 'Invalid to (YYYY-MM-DD)').optional(),
   })

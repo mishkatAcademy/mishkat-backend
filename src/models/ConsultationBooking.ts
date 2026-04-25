@@ -122,15 +122,12 @@ const ConsultationBookingSchema = new Schema<IConsultationBooking>(
   },
 );
 
-// ✅ صلاحية الوقت: end > start
 ConsultationBookingSchema.path('end').validate(function (this: IConsultationBooking, v: Date) {
   return this.start && v && v.getTime() > this.start.getTime();
 }, 'end must be greater than start');
 
-// 🔎 فهارس مفيدة
 ConsultationBookingSchema.index({ instructor: 1, status: 1, start: 1 });
 
-// ⛔️ منع double-booking لنفس start/end (يُستثنى cancelled)
 ConsultationBookingSchema.index(
   { instructor: 1, start: 1, end: 1 },
   {

@@ -37,10 +37,9 @@ export interface SearchOptions<T> {
   sortBy?: keyof T;
   order?: Order;
   sort?: Record<string, 1 | -1>;
-  /** قائمة بيضاء اختيارية لحقول الفرز المسموح بها */
+  /** قائمة لحقول الفرز المسموح بها */
   allowedSortBy?: string[];
 
-  /** إسامي متوافقة: select/projection */
   select?: string | ProjectionType<T>;
   projection?: ProjectionType<T>;
 
@@ -48,12 +47,11 @@ export interface SearchOptions<T> {
   populate?: string | PopulateOptions | (string | PopulateOptions)[];
   lean?: boolean | { getters?: boolean };
   collation?: CollationOptions;
-  allowDiskUse?: boolean; // ⚠️ غالبًا مفيدة مع aggregation فقط
+  allowDiskUse?: boolean;
   hint?: string | Record<string, 1 | -1>;
   readPreference?: ReadPreferenceLike;
   queryOptions?: QueryOptions;
 
-  /** بحث نصي عبر $text (اختياري لو عامل Text Index) */
   useTextSearch?: boolean;
   textLanguage?: string; // مثال: "ar" | "en"
 
@@ -61,8 +59,7 @@ export interface SearchOptions<T> {
   regexMode?: RegexMode; // "contains" (افتراضي) | "prefix" | "suffix"
   maxRegexLength?: number; // افتراضي 128
 
-  /** Cursor (اختياري) */
-  afterId?: string; // لو حابب تستخدمه بدل skip/limit
+  afterId?: string;
 }
 
 export interface SearchResult<T> {
@@ -110,7 +107,6 @@ function sanitizeSortObject(
   return out;
 }
 
-/** تحليل صيغة sort النصية مثل: "-createdAt,price" */
 function parseSortString(input: string, allowedSortBy?: string[]): string | Record<string, 1 | -1> {
   const parts = input
     .split(',')
@@ -148,7 +144,6 @@ function parseSortString(input: string, allowedSortBy?: string[]): string | Reco
  * ✅ searchInModel
  * - يبني استعلام مرن بـ filters + (Regex OR على fields) + $text اختياري.
  * - يدعم pagination (skip/limit) أو cursor بـ afterId.
- * - لا يلمس req.query إطلاقًا — ده Helper مستقل.
  */
 export async function searchInModel<T>({
   model,
@@ -200,7 +195,6 @@ export async function searchInModel<T>({
     clauses.push({ $or: orQuery as FilterQuery<T>[] });
   }
 
-  // بحث $text (لو مفعّل ومتاح index)
   if (useTextSearch && searchTerm) {
     const textExpr: any = { $search: searchTerm };
     if (textLanguage) textExpr.$language = textLanguage;
@@ -215,12 +209,11 @@ export async function searchInModel<T>({
   if (!afterId) {
     skip = (safePage - 1) * safeLimit;
   } else {
-    // استخدم ObjectId حقيقي لو صالح
     if (Types.ObjectId.isValid(afterId)) {
       const after = new Types.ObjectId(afterId);
       const op = order === 'asc' ? '$gt' : '$lt';
       (finalQuery as any)._id = { ...(finalQuery as any)._id, [op]: after };
-    } // لو مش صالح نتجاهل الـ cursor بهدوء
+    }
   }
 
   /* ========= Sorting ========= */
@@ -228,7 +221,7 @@ export async function searchInModel<T>({
   if (sort && Object.keys(sort).length > 0) {
     sortOptions = sanitizeSortObject(sort, allowedSortBy);
   } else if (useTextSearch) {
-    // رتب بالـ textScore desc
+    // نرتب بالـ textScore desc
     sortOptions = { score: { $meta: 'textScore' } };
   } else if (sortBy) {
     const cleaned = safeField(String(sortBy));
@@ -261,7 +254,6 @@ export async function searchInModel<T>({
   if (hint) query = query.hint(hint as any);
   if (readPreference) (query as any).read(readPreference);
 
-  // ⚠️ allowDiskUse عادةً للـ aggregation؛ بعض الإصدارات قد تتجاهله في find
   if (allowDiskUse && typeof (query as any).allowDiskUse === 'function') {
     (query as any).allowDiskUse();
   }

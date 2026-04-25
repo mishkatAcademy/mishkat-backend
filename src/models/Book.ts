@@ -2,7 +2,6 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import slugify from 'slugify';
 
-/** 👈 تمثيل نص محلّي (عربي/إنجليزي) */
 export type LocalizedText = {
   ar?: string;
   en?: string;
@@ -29,7 +28,6 @@ export interface IBook extends Document {
   // رقمي/ورقي
   isDigital: boolean;
 
-  // ⚠️ back-compat؛ الأفضل لاحقًا subdoc pdf{url,relPath,...}
   pdfUrl?: string;
   pdfRelPath?: string;
 
@@ -73,7 +71,6 @@ function getUpdated<T>(doc: any, path: string, fallback: T): T {
   return (doc?.[path] ?? fallback) as T;
 }
 
-/** سكيمة للنصوص المحلية (بدون _id) */
 const LocalizedSchema = new Schema<LocalizedText>(
   {
     ar: { type: String, trim: true },
@@ -96,7 +93,6 @@ const BookSchema = new Schema<IBook>(
       },
     },
 
-    // لو عايز ثبات URL: فعّل immutable: true
     slug: { type: String, required: true /*, immutable: true*/ },
 
     description: { type: LocalizedSchema },
@@ -232,16 +228,14 @@ const BookSchema = new Schema<IBook>(
         return ret;
       },
     },
-    versionKey: false, // لو حابب تلغي __v
+    versionKey: false,
   },
 );
 
 /* ==================== فهارس مهمة ==================== */
 
-// 1) slug فريد فقط على العناصر النشطة (يتماشى مع soft delete)
 BookSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
-// 2) ISBN فريد للكتب غير المحذوفة فقط، ومع قيمة غير فارغة
 BookSchema.index(
   { isbn: 1 },
   {
@@ -253,13 +247,11 @@ BookSchema.index(
   },
 );
 
-// 3) شيوع الاستعلامات
 BookSchema.index({ showInHomepage: 1, isDeleted: 1 });
 BookSchema.index({ categories: 1, isDeleted: 1, createdAt: -1 });
 BookSchema.index({ priceHalallas: 1 });
 BookSchema.index({ createdAt: -1 });
 
-// 4) (اختياري) بحث نصي بسيط
 BookSchema.index(
   { 'title.ar': 'text', 'title.en': 'text', 'description.ar': 'text', 'description.en': 'text' },
   { default_language: 'none' },
@@ -298,7 +290,6 @@ BookSchema.virtual('isInStock').get(function (this: IBook) {
 
 /* ==================== Hooks ==================== */
 
-// Fallback لعمل slug لو لم يُمرّر (الخدمة أفضل مكان لضمان uniqueness)
 BookSchema.pre('validate', function (next) {
   if (!this.slug && (this.title?.en || this.title?.ar)) {
     const base = (this.title?.en || this.title?.ar || '').trim();
@@ -306,14 +297,12 @@ BookSchema.pre('validate', function (next) {
       this.slug = slugify(base, { lower: true, strict: true, locale: 'ar' });
     }
   }
-  // تطبيع تلقائي: الكتاب الرقمي => stock=null
   if (this.isDigital) {
     this.stock = null as any;
   }
   next();
 });
 
-// تطبيع عند التحديث عبر findOneAndUpdate (مش بيمر على pre('validate'))
 BookSchema.pre('findOneAndUpdate', function (next) {
   const u: any = this.getUpdate() || {};
   const $set = (u.$set = u.$set || {});

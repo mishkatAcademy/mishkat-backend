@@ -1,3 +1,5 @@
+// مجرد بداية الشغل الأساسي في version II إن شاء الله
+
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import slugify from 'slugify';
 
@@ -61,13 +63,5 @@ const CourseSchema: Schema = new Schema<ICourse>(
     timestamps: true,
   },
 );
-
-// توليد slug تلقائي قبل الحفظ
-// CourseSchema.pre("save", function (next) {
-//   if (this.isModified("title")) {
-//     this.slug = slugify(this.title, { lower: true, strict: true });
-//   }
-//   next();
-// });
 
 export default mongoose.model<ICourse>('Course', CourseSchema);

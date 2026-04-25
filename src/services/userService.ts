@@ -123,7 +123,6 @@ export const updateUserRoleService = async (id: string, role: string): Promise<I
     const existingProfile = await InstructorProfile.findOne({ user: user._id });
 
     if (!existingProfile) {
-      // يكفي user بس؛ الباقي له defaults في الـ Schema
       await InstructorProfile.create({ user: user._id });
     } else if (!existingProfile.isActive) {
       existingProfile.isActive = true;
@@ -131,7 +130,6 @@ export const updateUserRoleService = async (id: string, role: string): Promise<I
     }
   }
 
-  // 2) نزول من instructor لأي دور آخر → عطّل الـ Profile
   if (previousRole === 'instructor' && role !== 'instructor') {
     await InstructorProfile.updateOne({ user: user._id }, { isActive: false });
   }
@@ -148,7 +146,7 @@ export const deactivateUserService = async (userId: string) => {
   user.isDeleted = true;
   await user.save();
 
-  // 👇 لو المدرّس اتعطل → عطّل بروفايله كمان
+  // 👇 لو المدرّس اتعطل → نعطّل بروفايله كمان
   if (user.role === 'instructor') {
     await InstructorProfile.updateOne({ user: user._id }, { isActive: false });
   }
@@ -163,7 +161,6 @@ export const reactivateUserService = async (userId: string) => {
   user.isDeleted = false;
   await user.save();
 
-  // 👇 لو هو instructor → رجّع الـ profile active (لو حابب)
   if (user.role === 'instructor') {
     await InstructorProfile.updateOne({ user: user._id }, { isActive: true });
   }

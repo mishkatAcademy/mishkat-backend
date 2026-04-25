@@ -17,7 +17,7 @@ export interface PaginationOptions {
   defaultLimit?: number; // default: 10
   /** الحد الأقصى المسموح به */
   maxLimit?: number; // default: 100
-  /** الفرز الافتراضي (يُمرَّر كما هو إلى Mongoose) */
+  /** الفرز الافتراضي */
   defaultSort?: string | SortObject; // default: '-createdAt'
   /**
    * قائمة بيضاء لأسماء الحقول المسموح الفرز بها.
@@ -88,7 +88,7 @@ function parseSortString(input: string, allowedSortBy?: string[]): string | Sort
     obj[cleaned] = dir;
   }
 
-  // لو طلع كائن صالح نرجّعه، وإلا نعيد النص الأصلي (Mongoose يقبله)
+  // لو طلع كائن صالح نرجّعه، وإلا نعيد النص الأصلي
   return Object.keys(obj).length ? obj : input;
 }
 
@@ -99,7 +99,6 @@ function parseSortString(input: string, allowedSortBy?: string[]): string | Sort
 /**
  * ✅ getPagination
  * - يقرأ القيم من req.validated?.query (لو موجود) وإلا من req.query
- * - لا يكتب على req.query إطلاقًا (توافق مع Express الحديثة)
  * - يدعم:
  *   1) sortBy=<field>&order=asc|desc (مع whitelist اختيارية)
  *   2) sort كسلسلة جاهزة: "-createdAt,price" (مع تحليل/Whitelist احتياطي)
@@ -163,10 +162,6 @@ export function applySort<T extends Document>(
  * - يستقبل Query للبيانات + Query للعدّ الإجمالي
  * - يطبّق skip/limit على Query البيانات
  * - يرجّع { data, meta } حيث meta مبنية بـ buildMeta(total, page, limit)
- *
- * ملاحظات:
- * - استخدم .lean() على Query البيانات قبل الاستدعاء حسب احتياجك.
- * - countQuery ممكن يكون countDocuments() أو aggregate يُرجع عددًا.
  */
 export async function paginate<T extends Document>(
   dataQuery: Query<T[], T>,
@@ -176,10 +171,7 @@ export async function paginate<T extends Document>(
 ): Promise<PaginatedResult<T>> {
   const skip = (page - 1) * limit;
 
-  const [data, total] = await Promise.all([
-    dataQuery.skip(skip).limit(limit), // طبّق الفرز قبل الاستدعاء إن لزم: applySort(dataQuery, sort)
-    countQuery,
-  ]);
+  const [data, total] = await Promise.all([dataQuery.skip(skip).limit(limit), countQuery]);
 
   return { data, meta: buildMeta(total, page, limit) };
 }

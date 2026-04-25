@@ -5,7 +5,7 @@ import type { Model, FilterQuery } from 'mongoose';
 export type LocalizedText = { ar?: string; en?: string };
 
 /**
- * حوّل عنوان محلّي إلى slug أساسي
+ * يحوّل العنوان المحلي إلى slug أساسي
  * - يدعم تعدد اللغات (ar/en) مع ترتيب تفضيل
  * - لو مفيش عنوان خالص، نستخدم fallback (افتراضي: "item")
  */
@@ -31,9 +31,8 @@ export function slugFromLocalized(
 }
 
 /**
- * ابني slug فريد لموديل معيّن
- * - يعتمد على فهرس unique على slug (مع isDeleted: false لو soft-delete)
- * - فلتر إضافي اختياري (مثال: { isDeleted: false })
+ * نبني slug فريد لموديل معيّن
+ * - يعتمد على فهرس unique على slug
  * - يستثني وثيقة معيّنة لو بتعمل تحديث (excludeId)
  */
 export async function makeUniqueSlug<T extends { slug: string }>(
@@ -41,21 +40,19 @@ export async function makeUniqueSlug<T extends { slug: string }>(
   baseSlug: string,
   opts?: {
     filter?: FilterQuery<T>;
-    excludeId?: string; // تجاهل وثيقة معينة (وقت التحديث)
-    maxTries?: number; // حد أقصى للمحاولات
+    excludeId?: string;
+    maxTries?: number;
   },
 ): Promise<string> {
   const filter = opts?.filter ?? {};
   const excludeId = opts?.excludeId;
   const maxTries = Math.max(2, opts?.maxTries ?? 50);
 
-  // هات كل الـ slugs اللي بتبدأ بالـ baseSlug أو baseSlug-رقم
   const regex = new RegExp(`^${escapeRegExp(baseSlug)}(?:-(\\d+))?$`, 'i');
   const existing = await model.find({ ...filter, slug: { $regex: regex } }, { slug: 1 }).lean();
 
   if (!existing.length) return baseSlug;
 
-  // استخرج أكبر suffix
   let maxSuffix = 1;
   for (const doc of existing) {
     const m = String((doc as any).slug).match(/-(\\d+)$/);
@@ -65,7 +62,6 @@ export async function makeUniqueSlug<T extends { slug: string }>(
     }
   }
 
-  // جرّب suffixes جديدة لحد ما تلاقي المتاح
   for (let i = maxSuffix + 1; i < maxSuffix + 1 + maxTries; i++) {
     const candidate = `${baseSlug}-${i}`;
     const found = await model
@@ -78,7 +74,6 @@ export async function makeUniqueSlug<T extends { slug: string }>(
     if (!found) return candidate;
   }
 
-  // fallback: لو الدنيا زحمة جدًا، زوّد رقم عشوائي بسيط
   return `${baseSlug}-${Date.now() % 10000}`;
 }
 

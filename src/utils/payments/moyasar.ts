@@ -1,4 +1,4 @@
-// Placeholder واجهة تكامل Moyasar — استبدلها بنداء فعلي لـ API
+// Placeholder واجهة تكامل Moyasar — لنقوم لاحقا باستبدالها بنداء فعلي لـ API بعد التعاقد مع بوابة الدفع
 // الفكرة: ترجع paymentId + paymentUrl + amount
 export interface CreatePaymentInput {
   amountHalalas: number;
@@ -18,8 +18,8 @@ export interface CreatePaymentResult {
 export async function createMoyasarPayment(
   input: CreatePaymentInput,
 ): Promise<CreatePaymentResult> {
-  // TODO: نفّذ نداء API الحقيقي هنا
-  // مؤقتًا: رجّع نتائج وهمية (للاختبار المحلي)
+  // TODO: نداء الــ API الحقيقي هنا
+  // مؤقتًا: نقوم بإرجاع نتائج وهمية (للاختبار المحلي)
   const paymentId = `pay_${Math.random().toString(36).slice(2, 10)}`;
   const paymentUrl = `https://pay.example.com/${paymentId}`;
   return {

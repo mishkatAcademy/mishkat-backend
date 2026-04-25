@@ -35,7 +35,7 @@ const LocalizedSchema = new Schema<LocalizedText>(
 
 const CategorySchema = new Schema<ICategory>(
   {
-    title: { type: LocalizedSchema, required: true }, // التحقق الحقيقي في pre('validate')
+    title: { type: LocalizedSchema, required: true },
     slug: { type: String, required: true, lowercase: true, trim: true },
 
     description: { type: LocalizedSchema },
@@ -80,7 +80,6 @@ const CategorySchema = new Schema<ICategory>(
 
 /* ========== Validations & Hooks ========== */
 
-// لازم عنوان بالعربي أو الإنجليزي على الأقل + scopes غير فاضية
 CategorySchema.pre('validate', function (next) {
   try {
     const t = (this as ICategory).title || {};
@@ -95,13 +94,8 @@ CategorySchema.pre('validate', function (next) {
       return next(new Error('At least one scope is required.'));
     }
 
-    // تطبيع إضافي للـ slug (لو جالك من السيرفس مظبوط خلاص)
     if (typeof this.slug === 'string') {
       this.slug = this.slug.trim().toLowerCase();
-      // اختياري: enforce pattern (لو بتستخدم slugify بحروف لاتينية)
-      // if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(this.slug)) {
-      //   return next(new Error('Invalid slug format.'));
-      // }
     }
 
     next();
@@ -112,10 +106,8 @@ CategorySchema.pre('validate', function (next) {
 
 /* ========== Indexes ========== */
 
-// slug فريد للعناصر غير المحذوفة (يتماشى مع soft-delete)
 CategorySchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
-// فهارس مساعدة للاستعلامات الشائعة
 CategorySchema.index({ isDeleted: 1, scopes: 1, order: 1 });
 CategorySchema.index({ isDeleted: 1, booksCount: -1 });
 CategorySchema.index({ isDeleted: 1, coursesCount: -1 });
@@ -135,11 +127,9 @@ async function incCountImpl(
 
   await this.updateOne({ _id: id, isDeleted: false }, { $inc: { [field]: delta } as any });
 
-  // قصّ القيم السالبة لو حصل تسابق نادر
   await this.updateOne({ _id: id, [field]: { $lt: 0 } as any }, { $set: { [field]: 0 } });
 }
 
-// التعيين بشكل مُنضبط للـ typing
 (CategorySchema.statics as unknown as CategoryModel).incCount = incCountImpl;
 
 const Category = mongoose.model<ICategory, CategoryModel>('Category', CategorySchema);

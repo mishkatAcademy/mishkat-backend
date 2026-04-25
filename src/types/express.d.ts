@@ -68,7 +68,6 @@ declare module 'express-serve-static-core' {
     };
   }
 
-  /** وسّع Locals بدل ما نعيد تعريف Response كاملة */
   interface Locals extends DocsLocals {}
 }
 

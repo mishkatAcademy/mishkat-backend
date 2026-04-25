@@ -25,7 +25,7 @@ const addressSchema = new Schema<IAddress>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true, // ⚡ لتسريع الاستعلام حسب المستخدم
+      index: true,
     },
     label: { type: String, enum: ['home', 'work', 'other'], default: 'home' },
     recipientName: { type: String, required: true, trim: true },
@@ -42,12 +42,6 @@ const addressSchema = new Schema<IAddress>(
   { timestamps: true },
 );
 
-/**
- * ✅ قيود وفهارس مهمّة:
- * - عنوان افتراضي واحد نشط لكل مستخدم:
- *   unique مع partialFilterExpression على isDefault:true و isDeleted:false
- * - فهرس مركّب لتسريع القوائم
- */
 addressSchema.index(
   { user: 1, isDefault: 1 },
   { unique: true, partialFilterExpression: { isDefault: true, isDeleted: false } },

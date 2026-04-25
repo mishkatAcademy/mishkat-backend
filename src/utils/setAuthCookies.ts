@@ -6,9 +6,7 @@ import { buildCookieOptions, cookieMaxAgeFromExpiresIn } from './tokens';
 function getCookieDomainFromAppUrl(): string | undefined {
   try {
     const host = new URL(env.APP_URL).hostname; // ex: 'localhost' or 'yourfrontend.com'
-    // في dev بلاش domain علشان localhost يبقى أسهل
     if (env.NODE_ENV !== 'production') return undefined;
-    // في الإنتاج: لو عايز دومين رئيسي (بدون subdomain) عدّله هنا حسب احتياجك
     return host;
   } catch {
     return undefined;
@@ -23,7 +21,6 @@ const COOKIE_NAMES = {
 export function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
   const domain = getCookieDomainFromAppUrl();
 
-  // نحسب maxAge من env (مثلاً '15m' → ms)
   const accessMaxAge = cookieMaxAgeFromExpiresIn(env.ACCESS_TOKEN_EXPIRES_IN);
   const refreshMaxAge = cookieMaxAgeFromExpiresIn(env.REFRESH_TOKEN_EXPIRES_IN);
 

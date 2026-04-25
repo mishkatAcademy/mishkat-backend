@@ -24,7 +24,6 @@ export async function listMyBooksService(userId: string, page = 1, limit = 10) {
     { $unwind: '$items' },
     { $match: { 'items.type': 'Book' } },
 
-    // ✅ الأحدث أولًا عشان ناخد last purchase بـ $first
     { $sort: { createdAt: -1 } },
 
     {
@@ -53,7 +52,6 @@ export async function listMyBooksService(userId: string, page = 1, limit = 10) {
     },
     { $unwind: { path: '$book', preserveNullAndEmptyArrays: true } },
 
-    // current price SAR from halalas (Book fields: priceHalallas / salesPriceHalallas)
     {
       $addFields: {
         bookId: { $toString: '$_id' },
@@ -171,7 +169,6 @@ export async function getMyBookByIdService(userId: string, bookId: string) {
   const uid = new Types.ObjectId(userId);
   const bid = new Types.ObjectId(bookId);
 
-  // آخر order مدفوع فيه الكتاب
   const lastOrder = await Order.findOne({
     user: uid,
     status: { $in: ['paid', 'fulfilled'] },
@@ -188,7 +185,6 @@ export async function getMyBookByIdService(userId: string, bookId: string) {
     (x: any) => x.type === 'Book' && String(x.refId) === String(bid),
   );
 
-  // إجمالي الملكية
   const qtyAgg = await Order.aggregate([
     {
       $match: {
@@ -230,7 +226,6 @@ export async function getMyBookReadUrlService(userId: string, bookId: string) {
   const uid = new Types.ObjectId(userId);
   const bid = new Types.ObjectId(bookId);
 
-  // 1) تأكد الملكية من Orders (مصدر الحقيقة)
   const owns = await Order.exists({
     user: uid,
     status: { $in: ['paid', 'fulfilled'] },
@@ -240,20 +235,16 @@ export async function getMyBookReadUrlService(userId: string, bookId: string) {
 
   if (!owns) throw AppError.forbidden('You do not own this book');
 
-  // 2) هات الكتاب
   const book = await Book.findById(bid).select('isDeleted isDigital pdfRelPath pdfUrl').lean();
   if (!book || (book as any).isDeleted) throw AppError.notFound('Book not found');
 
-  // 3) لازم يكون رقمي + عنده pdfRelPath
   if (!(book as any).isDigital) throw AppError.badRequest('This book is not digital');
 
   const pdfRelPath = (book as any).pdfRelPath as string | undefined;
   if (!pdfRelPath) {
-    // لو انت بتستخدم pdfUrl خارجي فقط، ممكن ترجع pdfUrl بدل signed
     throw AppError.badRequest('pdfRelPath is missing for this book');
   }
 
-  // 4) signed url
   const signed = makeSignedBookUrl(pdfRelPath);
 
   return {

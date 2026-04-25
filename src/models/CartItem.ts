@@ -17,7 +17,7 @@ export interface CartSnapshot {
   salesPriceHalalas?: number;
   currency: 'SAR';
 
-  // ✅ ConsultationHold only (optional)
+  // ✅ ConsultationHold only
   holdId?: string;
   offeringId?: string;
   instructorId?: string;
@@ -54,7 +54,7 @@ const CartSnapshotSchema = new Schema<CartSnapshot>(
     salesPriceHalalas: { type: Number, min: 0 },
     currency: { type: String, enum: ['SAR'], default: 'SAR', required: true },
 
-    // ✅ ConsultationHold fields
+    // ConsultationHold fields
     holdId: { type: String },
     offeringId: { type: String },
     instructorId: { type: String },
@@ -74,7 +74,6 @@ const CartItemSchema = new Schema<ICartItem>(
     itemRef: {
       type: Schema.Types.ObjectId,
       required: true,
-      // refPath: 'itemType', // يوجّه populate حسب النوع
     },
     itemType: {
       type: String,
@@ -101,27 +100,20 @@ const CartItemSchema = new Schema<ICartItem>(
 CartItemSchema.path('snapshot').validate(function (this: ICartItem, snap: any) {
   if (this.itemType !== 'ConsultationHold') return true;
 
-  // لازم حقول أساسية للـ hold
   if (!snap?.holdId || !snap?.offeringId || !snap?.instructorId) return false;
   if (!snap?.start || !snap?.end || !snap?.expiresAt) return false;
 
-  // expiresAt لازم > now وقت الإضافة (مش شرط 100% لكن مفيد)
   if (new Date(snap.expiresAt).getTime() <= Date.now()) return false;
 
   return true;
 }, 'Invalid consultation snapshot');
 
-// 🛡️ كل مستخدم لا يمكن أن يضيف نفس العنصر مرتين بنفس النوع
-// 👮 منع التكرار (مع السماح بإعادة الإضافة بعد الحذف)
-// unique(user, itemType, itemRef) بشرط isDeleted=false
 CartItemSchema.index(
   { user: 1, itemType: 1, itemRef: 1 },
   { unique: true, partialFilterExpression: { isDeleted: false } },
 );
 
-// ⚠️ ضمان الكمية = 1 في الأنواع غير الكتاب الورقي (Course/Consultation/Research + Book digital)
 CartItemSchema.pre('validate', function (next) {
-  // نسيب الخدمة تحدد إن كان الكتاب ورقي ولا لأ؛ هنا بس نضمن عدم الصفر والسالب
   if (this.quantity < 1) this.quantity = 1;
   next();
 });

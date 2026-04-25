@@ -44,7 +44,7 @@ async function finalizeConsultationHoldToBooking(opts: {
 
   if (existing) return { bookingId: String((existing as any)._id), already: true };
 
-  // ✅ Atomic lock: اقفل الـ hold لو لسه holding ومش منتهي (يقلل سباق التزامن)
+  // ✅ Atomic lock: يقفل الـ hold لو لسه holding ومش منتهية (يقلل سباق التزامن)
   const now = new Date();
 
   const hold = await ConsultationHold.findOneAndUpdate(
@@ -79,14 +79,12 @@ async function finalizeConsultationHoldToBooking(opts: {
   }
 
   try {
-    // ✅ Guard: applicant لازم يكون مكتمل لأن schema عندك required
     const a = (hold as any).applicant;
     if (!a?.fullName || !a?.email || !a?.whatsapp) {
       await ConsultationHold.updateOne({ _id: holdId }, { $set: { status: 'failed' } });
       throw AppError.badRequest('Hold applicant data is incomplete');
     }
 
-    // ✅ منع تضارب: أي booking مؤكدة/مكتملة تتداخل
     const clash = await ConsultationBooking.findOne({
       instructor: hold.instructor,
       start: { $lt: hold.end },
@@ -165,7 +163,6 @@ async function finalizeConsultationHoldToBooking(opts: {
 
     return { bookingId: String((booking as any)._id), already: false };
   } catch (err: any) {
-    // ✅ لو أي حاجة فشلت بعد lock → علّم hold failed (إلا لو اتعمل expired)
     await ConsultationHold.updateOne(
       { _id: holdId, status: { $ne: 'expired' } },
       { $set: { status: 'failed' } },
@@ -225,7 +222,6 @@ async function buildOrderLinesFromCart(userId: string, opts?: { cartItemId?: str
     );
   }
 
-  // ✅ Guard للـ holds (داخل الـ selection بس)
   const holdsCount = cartItems.filter((c) => c.itemType === 'ConsultationHold').length;
   if (holdsCount > 1) {
     throw AppError.badRequest('يمكن شراء استشارة واحدة فقط في كل عملية دفع');
@@ -239,22 +235,6 @@ async function buildOrderLinesFromCart(userId: string, opts?: { cartItemId?: str
     if (type !== 'Book' && type !== 'ConsultationHold') {
       throw AppError.badRequest(`Unsupported item type in cart: ${type}`);
     }
-
-    //     // ✅ Ownership + validity guard للـ hold (زيادة أمان عن priceForItem)
-    //     if (type === 'ConsultationHold') {
-    //       const hold = await ConsultationHold.findById(ci.itemRef)
-    //         .select('status expiresAt user')
-    //         .lean();
-
-    //       if (!hold) throw AppError.notFound('Hold not found');
-    //       if ((hold as any).status !== 'holding') throw AppError.badRequest('Hold غير صالح');
-    //       if ((hold as any).expiresAt && new Date((hold as any).expiresAt) <= new Date()) {
-    //         throw AppError.badRequest('Hold انتهى');
-    //       }
-    //       if ((hold as any).user && String((hold as any).user) !== String(userId)) {
-    //         throw AppError.forbidden('هذا الـ Hold لا يخص هذا المستخدم');
-    //       }
-    //     }
 
     const priced = await priceForItem(type, String(ci.itemRef));
 
@@ -355,7 +335,7 @@ export async function createOrderFromCart(
     status: 'pending_payment',
     currency: 'SAR',
     items,
-    // ↓ لو فيه شحن: خزّن الـ snapshot + المرجع
+
     addressRef: needsShipping ? (addressId as any) : undefined,
     address: addressSnapshot,
     totals,
@@ -379,13 +359,11 @@ export async function createOrderFromCart(
     failUrl: env.MOYASAR_FAIL_URL,
   });
 
-  // خزّن paymentId
   order.payment.paymentId = pay.paymentId;
   await order.save();
 
   const result = { order: order.toJSON(), paymentUrl: pay.paymentUrl };
 
-  // 7) Idempotency: خزّن النتيجة
   if (idempotencyKey) {
     await saveOnce(idempotencyKey, result, 24 * 60 * 60 * 1000);
   }
@@ -599,7 +577,6 @@ export async function handleMoyasarWebhook(payload: MoyasarWebhookPayload) {
       (order.items[holdIdx] as any).type = 'ConsultationBooking';
       (order.items[holdIdx] as any).refId = new Types.ObjectId(bookingId);
 
-      // (اختياري مفيد)
       (order.items[holdIdx] as any).snapshot = {
         ...(order.items[holdIdx] as any).snapshot,
         holdId,

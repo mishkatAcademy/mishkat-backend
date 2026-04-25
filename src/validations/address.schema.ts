@@ -33,7 +33,6 @@ export const createAddressSchema = z.object({
 /** ✏️ Body: تحديث عنوان (كل الحقول اختيارية) */
 export const updateAddressSchema = createAddressSchema.partial();
 
-/** ✅ Body (اختياري): لو حابب تخلي المسار /:id/default بدون body */
 export const setDefaultAddressSchema = z.object({
   isDefault: z.boolean().optional(), // مش هنستخدمه غالبًا
 });

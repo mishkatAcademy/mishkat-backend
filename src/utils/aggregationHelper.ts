@@ -12,16 +12,15 @@ export const getCategoriesWithItems = async (collectionName: CollectionName) => 
   const countFieldName = collectionName === 'books' ? 'booksCount' : 'coursesCount';
 
   const pipeline: PipelineStage[] = [
-    // فلترة التصنيفات بدري
+    // فلترة التصنيفات
     { $match: { isDeleted: false } },
 
-    // احسب عدد العناصر المرتبطة بهذه الفئة عبر lookup pipeline + count
+    // نحسب عدد العناصر المرتبطة بهذه الفئة عبر lookup pipeline + count
     {
       $lookup: {
-        from: collectionName, // تأكد إنه اسم الـ collection الحقيقي في Mongo
+        from: collectionName,
         let: { catId: '$_id' },
         pipeline: [
-          // طابق العناصر اللي تحتوي هذه الفئة داخل مصفوفة categories
           {
             $match: {
               $expr: {
@@ -29,14 +28,12 @@ export const getCategoriesWithItems = async (collectionName: CollectionName) => 
               },
             },
           },
-          // عدّ فقط بدون إرجاع المستندات
           { $count: 'count' },
         ],
         as: 'stats',
       },
     },
 
-    // أضف الحقل {booksCount|coursesCount}
     {
       $addFields: {
         [countFieldName]: {
@@ -45,14 +42,12 @@ export const getCategoriesWithItems = async (collectionName: CollectionName) => 
       },
     },
 
-    // رجّع فقط التصنيفات اللي عدّها > 0
     {
       $match: {
         [countFieldName]: { $gt: 0 },
       },
     },
 
-    // أسقط الحقل المؤقت
     { $project: { stats: 0 } },
   ];
 

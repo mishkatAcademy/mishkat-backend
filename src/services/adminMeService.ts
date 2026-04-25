@@ -14,7 +14,6 @@ export async function adminUpdateMeService(
   if (!user || user.isDeleted) throw AppError.notFound('User not found');
   if (user.role !== 'admin') throw AppError.forbidden('Admins only');
 
-  // ✅ لازم يبقى فيه تعديل فعلي (اسم أو avatar)
   const hasName =
     typeof updates.firstName !== 'undefined' || typeof updates.lastName !== 'undefined';
   const hasAvatar = !!avatarFile;
@@ -27,10 +26,8 @@ export async function adminUpdateMeService(
   if (typeof updates.lastName !== 'undefined') user.lastName = updates.lastName;
 
   if (avatarFile) {
-    // امسح القديم (لو موجود)
     await deleteLocalByRelPath(user.avatarRelPath);
 
-    // انقل الجديد لمجلد الأدمن
     const stored = await moveDiskFileToUploads(avatarFile, ADMIN_AVATAR_FOLDER);
 
     user.avatarUrl = stored.url; // للفرونت
@@ -52,7 +49,7 @@ export async function adminChangePasswordService(
   const ok = await user.comparePassword(input.currentPassword);
   if (!ok) throw AppError.badRequest('Current password is incorrect');
 
-  user.password = input.newPassword; // pre-save hashing
+  user.password = input.newPassword;
   await user.save();
 
   return { changed: true };

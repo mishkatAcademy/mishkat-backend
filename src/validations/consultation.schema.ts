@@ -44,7 +44,7 @@ export const createConsultationOfferingBodySchema = z.object({
 });
 
 /* ========== Offerings ==========
- * ?type + activeOnly + pagination اختيارياً
+ * ?type + activeOnly + pagination
  * ============================== */
 export const listOfferingsQuerySchema = z
   .object({
@@ -156,7 +156,6 @@ export const idParamSchema = z.object({ id: objectId }).strict();
 
 export const rescheduleBodySchema = z
   .object({
-    // ISO datetime: مثال "2025-10-05T14:30:00.000Z"
     newStartAt: z.string().datetime(),
     idempotencyKey: z.string().min(8).max(128).optional(),
   })
@@ -172,7 +171,6 @@ function safeSortString(sort?: string) {
   const s = (sort || '').trim();
   if (!s) return 'start:desc,createdAt:desc';
 
-  // whitelist fields to avoid weird sorts
   const parts = s
     .split(',')
     .map((p) => p.trim())
@@ -197,11 +195,10 @@ export const adminListBookingsQuerySchema = z
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
 
     instructorId: objectId.optional(), // User._id
-    userId: objectId.optional(), // الطالب (User._id) - ممكن null في booking لكن الفلتر هنا لو عايزه
+    userId: objectId.optional(), // الطالب (User._id) - ممكن null في booking لكن الفلتر هنا
     type: consultationTypeEnum.optional(), // offering.type snapshot
     status: bookingStatusEnum.optional(),
 
-    // فلترة على start (UTC) باستخدام YMD
     from: z.string().regex(YMD, 'Invalid from (YYYY-MM-DD)').optional(),
     to: z.string().regex(YMD, 'Invalid to (YYYY-MM-DD)').optional(),
 

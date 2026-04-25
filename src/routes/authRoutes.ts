@@ -34,7 +34,7 @@ const router = express.Router();
 
 /* ============================================================================
 🛡️ Rate limit / Slowdown مخصّص لمسارات حسّاسة
-- إضافة إلى أي limiter عام عاملُه على /api/v1/auth في server.ts
+- إضافة إلى أي limiter عام على /api/v1/auth في server.ts
 ============================================================================ */
 
 const otpLimiter = rateLimit({
@@ -48,9 +48,7 @@ const otpLimiter = rateLimit({
 const otpSlow = slowDown({
   windowMs: 15 * 60 * 1000,
   delayAfter: 50,
-  // ✅ سلوك v2: ثبّت التأخير لكل طلب بعد الحد
   delayMs: () => 250,
-  // اختياري: اسكت تحذير التحقق
   validate: { delayMs: false },
 });
 
@@ -66,14 +64,8 @@ const loginSlow = slowDown({
   windowMs: 15 * 60 * 1000,
   delayAfter: 10,
   delayMs: () => 250,
-  // اختياري: اسكت تحذير التحقق
   validate: { delayMs: false },
 });
-
-/* ============================================================================
-📦 المسارات
-ملاحظة: refresh/logout بيقروا/يمسحوا كوكيز، لذا مش محتاجين body validation
-============================================================================ */
 
 // 👤 إنشاء حساب جديد + توليد OTP
 router.post(

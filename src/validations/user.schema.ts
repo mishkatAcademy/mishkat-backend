@@ -19,19 +19,13 @@ export const passwordStrong = z
   .regex(/\d/, 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل')
   .regex(/[@$!%*?&._\-#]/, 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل مثل @ أو #');
 
-// ObjectId صارم: 24 hex
 export const objectIdStrict = z
   .string()
   .regex(/^[a-fA-F0-9]{24}$/, 'معرّف غير صالح (يجب أن يكون 24 خانة hex)');
 
-// Avatar URL اختياري
-// export const avatarUrl = z.string().url('رابط صورة غير صالح').optional();
-
-// Avatar URL اختياري (يتعامل مع '' و trim)
 export const avatarField = z.preprocess((val) => {
   if (typeof val !== 'string') return val;
   const trimmed = val.trim();
-  // لو جاي فاضي نخليه undefined علشان يعدّي كـ optional
   return trimmed === '' ? undefined : trimmed;
 }, z.string().url('رابط صورة غير صالح').optional());
 
@@ -53,7 +47,6 @@ export const registerSchema = z
     email: emailNormalized,
     password: passwordStrong,
     avatar: avatarField,
-    // isInstructor: z.boolean().default(false).optional(), // (مُلغى لتناسق الموديل)
   })
   .strict();
 
@@ -87,6 +80,7 @@ export const forgotPasswordSchema = z
   })
   .strict();
 
+// لم تعد موجودة
 // 6) verifyResetOtp
 // export const verifyResetOtpSchema = z
 //   .object({
@@ -155,7 +149,6 @@ export const userIdParamsSchema = z
  * - sortBy أبيض-قائمة لتفادي حقن مفاتيح فرز خبيثة
  * - order asc/desc
  * - isDeleted/isInstructor كـ boolean
- * - afterId (كسرسور) + regexMode/useTextSearch/textLanguage (اختياري)
  */
 const SORTABLE_FIELDS = [
   'createdAt',
@@ -175,9 +168,7 @@ export const userSearchQuerySchema = z
     order: z.enum(['asc', 'desc']).optional(),
 
     isDeleted: z.coerce.boolean().optional(),
-    // isInstructor: z.coerce.boolean().optional(), // موجود للفلترة لو رجّعناه/لازال في الداتا
 
-    // توافق مع searchHelper.ts (اختياري)
     afterId: objectIdStrict.optional(),
     regexMode: z.enum(['contains', 'prefix', 'suffix']).optional(),
     useTextSearch: z.coerce.boolean().optional(),

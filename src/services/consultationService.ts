@@ -162,7 +162,7 @@ export async function getPublicInstructorByUserIdService(
     weekly: prof.weekly,
     exceptions: prof.exceptions,
     meetingMethod: prof.meetingMethod,
-    meetingUrl: prof.meetingUrl, // لو meetingUrl حساس، رجّعه فقط بعد الدفع/للمستخدمين
+    meetingUrl: prof.meetingUrl,
     isActive: prof.isActive,
     avatarUrl: u?.avatarUrl,
   };
@@ -249,26 +249,6 @@ async function computeAvailabilityForDayWithDuration(
       .select('start end')
       .lean(),
   ]);
-
-  // const [bookings, holds] = await Promise.all([
-  //   ConsultationBooking.find({
-  //     instructor: instructorUserId,
-  //     status: { $in: ['confirmed', 'completed', 'refunded'] },
-  //     start: { $lt: dayEnd },
-  //     end: { $gt: dayStart },
-  //   })
-  //     .select('start end')
-  //     .lean(),
-  //   ConsultationHold.find({
-  //     instructor: instructorUserId,
-  //     status: 'holding',
-  //     expiresAt: { $gt: new Date() },
-  //     start: { $lt: dayEnd },
-  //     end: { $gt: dayStart },
-  //   })
-  //     .select('start end')
-  //     .lean(),
-  // ]);
 
   const blocked = [...bookings, ...holds];
   const free = afterNotice.filter(
@@ -357,11 +337,11 @@ export async function calendarOverlayService({
 
   // const dayStart = dateInRiyadhToUTC(from, '00:00');
   // const dayEnd = dateInRiyadhToUTC(to, '23:59');
+  // تم تعديلهم
 
   const dayStart = ensureDate(dateInRiyadhToUTC(from, '00:00'), 'dayStart');
   const dayEnd = ensureDate(dateInRiyadhToUTC(to, '23:59'), 'dayEnd');
 
-  // Exceptions داخل المدى (نقارن يوم/شهر/سنة على Riyadh midnight)
   const exceptions = (inst.exceptions || [])
     .map((e) => {
       const ymd = toRiyadhYMD(e.date);
@@ -461,7 +441,7 @@ export async function createHoldAndPaymentService({
   const start = dateInRiyadhToUTC(date, startHHMM);
   const end = new Date(start.getTime() + off.durationMinutes * 60 * 1000);
 
-  // Guard: لا تتجاوز أقصى فترة حجز مسبق
+  // Guard: عدم تتجاوز أقصى فترة حجز مسبق
   const maxAdvanceDays = inst.maxAdvanceDays ?? env.CONSULTATION_MAX_ADVANCE_DAYS ?? 30;
   const todayRiyadhStart = dateInRiyadhToUTC(toRiyadhYMD(new Date()), '00:00');
   if (start.getTime() - todayRiyadhStart.getTime() > maxAdvanceDays * 24 * 3600 * 1000) {
@@ -594,7 +574,7 @@ export async function handleConsultationWebhook(payload: MoyasarWebhookPayload) 
   if (hold.status === 'paid') return { ok: true };
 
   if (status === 'paid') {
-    // تأكد أن الـ hold لم ينتهِ
+    // تأكيد أن الـ hold لسه مانتهاش
     if (hold.expiresAt <= new Date()) {
       hold.status = 'expired';
       await hold.save();
@@ -606,7 +586,7 @@ export async function handleConsultationWebhook(payload: MoyasarWebhookPayload) 
       instructor: hold.instructor,
       start: { $lt: hold.end },
       end: { $gt: hold.start },
-      status: { $in: ['confirmed', 'completed', 'refunded'] }, // لو قررت refund يمنع
+      status: { $in: ['confirmed', 'completed', 'refunded'] }, // refund يمنع
     }).lean();
 
     if (clash) {
@@ -621,7 +601,7 @@ export async function handleConsultationWebhook(payload: MoyasarWebhookPayload) 
     const expectedVat = Math.round(((env.VAT_PERCENT ?? 0) / 100) * off.priceHalalas);
     const expectedGrand = off.priceHalalas + expectedVat;
 
-    // ✅ طابق المبلغ والعملة
+    // ✅ تأكيد تطابق المبلغ والعملة
     if (amount !== expectedGrand || (currency && currency !== 'SAR')) {
       hold.status = 'failed';
       await hold.save();
@@ -668,7 +648,7 @@ export async function handleConsultationWebhook(payload: MoyasarWebhookPayload) 
     hold.status = 'paid';
     await hold.save();
 
-    // 🧾 إنشاء Order خاص بالاستشارة (لو عندنا user مربوط بـ hold)
+    // 🧾 إنشاء Order خاص بالاستشارة
     await createOrderForConsultationPaid({
       userId: hold.user ? String(hold.user) : undefined,
       bookingId: String(booking._id),
@@ -737,7 +717,6 @@ export async function rescheduleConsultationService(
     throw AppError.badRequest('Reschedule window has passed');
   }
 
-  // لازم التاريخ يبقى محدد timezone (Z أو offset)
   if (!newStartIso.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(newStartIso)) {
     throw AppError.badRequest('newStartAt must include timezone (Z or +hh:mm)');
   }
@@ -779,7 +758,7 @@ export async function cancelConsultationService(userId: string, id: string) {
   b.status = 'cancelled';
   await b.save();
 
-  // (لاحقاً) لو withinWindow=true نطلق Refund عبر مزوّد الدفع
+  // TODO => لو withinWindow=true نطلق Refund عبر بوابة الدفع بعد اتمام التعاقد
   return { cancelled: true, eligibleForRefund: withinWindow };
 }
 
@@ -837,7 +816,6 @@ function bookingToAdminDTO(b: any) {
         }
       : null,
 
-    // يفضل نخفي payment.raw عن الأدمن UI إلا لو محتاجه
     payment: dto.payment
       ? {
           provider: dto.payment.provider,

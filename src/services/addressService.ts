@@ -2,7 +2,6 @@ import { Types } from 'mongoose';
 import Address, { IAddress } from '../models/Address';
 import AppError from '../utils/AppError';
 
-/** 🔎 مساعد: تأكد الملكية + غير محذوف */
 async function ensureOwnedAddress(userId: string, addressId: string) {
   const addr = await Address.findOne({
     _id: new Types.ObjectId(addressId),
@@ -13,7 +12,6 @@ async function ensureOwnedAddress(userId: string, addressId: string) {
   return addr;
 }
 
-/** 📃 قائمة عناويني (مع ترتيب افتراضي desc ثم الأحدث) */
 export async function listMyAddressesService(
   userId: string,
   opts: { page?: number; limit?: number; sortBy?: string } = {},
@@ -21,11 +19,9 @@ export async function listMyAddressesService(
   const page = Math.max(1, Math.floor(opts.page ?? 1));
   const limit = Math.min(100, Math.max(1, Math.floor(opts.limit ?? 10)));
 
-  // ترتيب افتراضي: الافتراضي أولاً ثم الأحدث
   const sort: Record<string, 1 | -1> = {};
   const sortBy = opts.sortBy ?? '';
   if (sortBy) {
-    // مثال: "-createdAt" أو "city"
     const dir = sortBy.startsWith('-') ? -1 : 1;
     const key = sortBy.replace(/^-/, '');
     sort[key] = dir;
@@ -97,7 +93,7 @@ export async function updateAddressService(
 ): Promise<IAddress> {
   const addr = await ensureOwnedAddress(userId, addressId);
 
-  // لو عايز تخليه افتراضي
+  // تعديل العنوان ليصبح العنوان الافتراضي
   if (updates.isDefault === true && !addr.isDefault) {
     await Address.updateMany({ user: userId, isDefault: true }, { $set: { isDefault: false } });
     addr.isDefault = true;
@@ -114,8 +110,6 @@ export async function updateAddressService(
   if (updates.country !== undefined) addr.country = updates.country;
   if (updates.notes !== undefined) addr.notes = updates.notes;
 
-  // ملاحظة: لو updates.isDefault === false وماعندكش افتراضي غيره، هنسمح بيها
-  // لكن مش هنضمن وجود افتراضي دائمًا (ممكن تضيف منطق إضافي لو عايز)
   await addr.save();
   return addr;
 }
@@ -156,7 +150,7 @@ export async function deleteAddressService(userId: string, addressId: string) {
   }
 }
 
-/** 🔍 قراءة عنوان مِلكي */
+/** 🔍 قراءة عنوان من عناويني */
 export async function getMyAddressService(userId: string, addressId: string) {
   return ensureOwnedAddress(userId, addressId);
 }

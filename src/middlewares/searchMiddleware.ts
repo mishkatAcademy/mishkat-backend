@@ -4,9 +4,6 @@ import { Model, FilterQuery } from 'mongoose';
 import { searchInModel } from '../utils/searchHelper';
 import { ok } from '../utils/response';
 
-// =======================
-// 🧩 أنواع وإعدادات
-// =======================
 type SortOrderStr = 'asc' | 'desc';
 
 interface PopulateConfig {
@@ -18,34 +15,22 @@ interface PopulateConfig {
 
 interface SearchConfig<T> {
   model: Model<T>;
-  /** الحقول اللي هنبحث فيها بـ searchTerm */
   fields: (keyof T)[];
 
-  /** فلاتر افتراضية (مثلاً isDeleted:false) */
   defaultFilters?: FilterQuery<T>;
 
-  /** أقصى حد للـ limit لحماية السيرفر (افتراضي 100) */
   maxLimit?: number;
 
-  /** مفاتيح مسموح بالفرز عليها (لو undefined بنسكت، لكن الأفضل تحددها) */
   allowedSortBy?: (keyof T)[];
 
-  /** مفاتيح مسموح بالفلترة عليها من الـ query (لو undefined بنقبل الكل) */
   allowedFilterKeys?: (keyof T)[];
 
-  /** select افتراضي لو عايز تقلل البيانات الراجعة */
   defaultSelect?: string;
 
-  /** استخدم lean؟ (بيسرّع القراءة لو مش محتاج ميثودز) */
   lean?: boolean;
 
-  /** populate لو محتاج */
   populate?: PopulateConfig | PopulateConfig[];
 }
-
-// =======================
-// 🛠️ Utilities صغيرة
-// =======================
 
 const isNumeric = (v: unknown) => typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v));
 
@@ -66,7 +51,7 @@ const toPrimitive = (v: unknown): unknown => {
   // number
   if (isNumeric(val)) return Number(val);
 
-  // ISO date (ببساطة نحاول نحوله لتاريخ لو valid)
+  // ISO date
   const d = new Date(val);
   if (!isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(val)) return d;
 
@@ -85,7 +70,7 @@ const applyOperator = (obj: any, key: string, rawVal: any) => {
   const v = toPrimitive(rawVal);
 
   if (op === 'between') {
-    // between=start,end  (تواريخ أو أرقام)
+    // between=start,end
     const arr = typeof v === 'string' ? v.split(',').map((x) => toPrimitive(x)) : v;
     const [from, to] = Array.isArray(arr) ? arr : [undefined, undefined];
     obj[field] = {
@@ -112,7 +97,7 @@ const applyOperator = (obj: any, key: string, rawVal: any) => {
     value = v.split(',').map((x) => toPrimitive(x));
   }
   if (op === 'regex' && typeof v === 'string') {
-    // نهرب الـ regex لحماية السيرفر من حقن الـ regex
+
     const escaped = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     value = new RegExp(escaped, 'i');
   }
@@ -120,7 +105,6 @@ const applyOperator = (obj: any, key: string, rawVal: any) => {
   obj[field] = { ...(obj[field] || {}), [mongoOp]: value };
 };
 
-/** نحول raw req.query لفلاتر Mongo آمنة */
 const buildFilters = <T>(
   raw: Record<string, unknown>,
   allowedFilterKeys?: (keyof T)[],
@@ -130,7 +114,6 @@ const buildFilters = <T>(
   Object.entries(raw).forEach(([k, v]) => {
     if (v === undefined) return;
 
-    // تخطي مفاتيح الـ pagination/search/sort
     if (
       k === 'searchTerm' ||
       k === 'page' ||
@@ -142,10 +125,9 @@ const buildFilters = <T>(
       return;
     }
 
-    // لو فيه whitelist للفلترة، نتأكد المفتاح الأساسي قبل الـ [op]
     const baseKey = k.replace(/\[(gte|gt|lte|lt|ne|in|nin|regex|between)\]$/, '');
     if (allowedFilterKeys && !allowedFilterKeys.includes(baseKey as keyof T)) {
-      return; // نتجاهل مفاتيح غير مسموح بها
+      return;
     }
 
     applyOperator(filters, k, v);
@@ -153,10 +135,6 @@ const buildFilters = <T>(
 
   return filters as FilterQuery<T>;
 };
-
-// =======================
-// 🚀 الميدلويير
-// =======================
 
 export const searchMiddleware = <T>({
   model,
@@ -171,7 +149,6 @@ export const searchMiddleware = <T>({
 }: SearchConfig<T>): RequestHandler => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // ✅ استخدم validated.query لو متاحة (بعد Zod)، وإلا fallback لـ req.query
       const q = (req.validated?.query as Record<string, unknown>) ?? (req.query as any);
 
       // 1) search term
@@ -203,7 +180,7 @@ export const searchMiddleware = <T>({
       const userSelect = typeof q?.select === 'string' ? q.select : undefined;
       const select = userSelect || defaultSelect;
 
-      // 5) filters: ابنيها من باقي الـ query بعد استبعاد مفاتيح التحكم
+      // 5) filters: من باقي الـ query بعد استبعاد مفاتيح التحكم
       const {
         searchTerm: _st,
         page: _pg,
@@ -231,7 +208,7 @@ export const searchMiddleware = <T>({
         populate,
       };
 
-      // 7) نفّذ البحث
+      // 7) البحث
       const result = await searchInModel<T>({
         model: model as Model<T>,
         fields,

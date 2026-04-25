@@ -13,13 +13,12 @@ import {
 
 const router = Router();
 
-// Webhook (لازم يبقى قبل أي body parser خاص لو محتاج raw body للتحقق من التوقيع)
 router.post('/webhook/moyasar', moyasarWebhookCtrl);
 
 // لازم تسجيل الدخول
 router.use(protect);
 
-// إنشاء طلب من الكارت (نفلّد body + headers للهيدر الاختياري)
+// إنشاء طلب من الكارت
 router.post(
   '/',
   validateRequest({ headers: idempotencyHeaderSchema, body: createOrderBodySchema }),

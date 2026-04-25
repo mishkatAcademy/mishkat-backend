@@ -19,7 +19,6 @@ function normalizeRelPath(relPath: string) {
 function toProtectedBooksUri(pdfRelPath: string) {
   const p = normalizeRelPath(pdfRelPath);
 
-  // لازم يبقى تحت files/books/
   const prefix = 'files/books/';
   const tail = p.startsWith(prefix) ? p.slice(prefix.length) : p;
 
@@ -27,7 +26,6 @@ function toProtectedBooksUri(pdfRelPath: string) {
   return `/protected/books/${tail}`;
 }
 
-/** يولّد signed-url يتوافق 100% مع nginx secure_link */
 export function makeSignedBookUrl(pdfRelPath: string, ttlSeconds?: number) {
   const uri = toProtectedBooksUri(pdfRelPath);
 

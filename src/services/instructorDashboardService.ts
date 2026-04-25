@@ -10,7 +10,6 @@ export async function listMyInstructorConsultationsService(
   instructorUserId: string,
   input: { page?: number; limit?: number; status?: string; from?: string; to?: string },
 ) {
-  // ✅ تأكد إنه Instructor وفعّال (اختياري لكن مفيد)
   const prof = await InstructorProfile.findOne({ user: instructorUserId }).select('_id isActive');
   if (!prof) throw AppError.notFound('Instructor profile not found');
 
@@ -22,7 +21,6 @@ export async function listMyInstructorConsultationsService(
 
   if (input.status) q.status = input.status;
 
-  // فلترة بالتاريخ (YYYY-MM-DD Riyadh day)
   if (input.from || input.to) {
     const fromUTC = input.from ? dateInRiyadhToUTC(input.from, '00:00') : undefined;
     const toUTC = input.to ? dateInRiyadhToUTC(input.to, '23:59') : undefined;
@@ -44,7 +42,6 @@ export async function listMyInstructorConsultationsService(
 
   const pages = Math.max(1, Math.ceil(total / limit));
 
-  // ✅ totals بالريال (SAR) + الاحتفاظ بالهللة لو احتجتها
   const mapped = items.map((b: any) => ({
     ...b,
     totals: b.totals
@@ -54,7 +51,6 @@ export async function listMyInstructorConsultationsService(
           vat: fromHalalas(b.totals.vatHalalas ?? 0),
           grandTotal: fromHalalas(b.totals.grandTotalHalalas ?? 0),
 
-          // اختياري: لو عايز تبقيهم
           priceHalalas: b.totals.priceHalalas,
           vatHalalas: b.totals.vatHalalas,
           grandTotalHalalas: b.totals.grandTotalHalalas,
