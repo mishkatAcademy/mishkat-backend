@@ -1,3 +1,4 @@
+// src/controllers/adminMeController.ts
 import type { Request, Response } from 'express';
 import catchAsync from '../utils/catchAsync';
 import { ok } from '../utils/response';

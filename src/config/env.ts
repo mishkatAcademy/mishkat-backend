@@ -4,6 +4,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const booleanFromEnv = z.preprocess((val) => {
+  if (typeof val === 'boolean') return val;
+
+  if (typeof val === 'string') {
+    const v = val.trim().toLowerCase();
+
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+    if (v === '1') return true;
+    if (v === '0') return false;
+  }
+
+  return val;
+}, z.boolean());
+
+const emptyStringToUndefined = z.preprocess((val) => {
+  if (typeof val === 'string' && val.trim() === '') return undefined;
+  return val;
+}, z.string().optional());
+
 const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
@@ -37,15 +57,19 @@ const baseSchema = z.object({
 
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
-  COOKIE_SECURE: z
-    .string()
-    .default('false')
-    .transform((v) => v === 'true'),
+  // COOKIE_SECURE: z
+  //   .string()
+  //   .default('false')
+  //   .transform((v) => v === 'true'),
+  // COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // TRUST_PROXY: z
+  //   .string()
+  //   .default('false')
+  //   .transform((v) => v === 'true'),
+
+  COOKIE_SECURE: booleanFromEnv.default(false),
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
-  TRUST_PROXY: z
-    .string()
-    .default('false')
-    .transform((v) => v === 'true'),
+  TRUST_PROXY: booleanFromEnv.default(false),
 
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 دقيقة
   RATE_LIMIT_MAX: z.coerce.number().default(100),
@@ -91,26 +115,38 @@ const baseSchema = z.object({
   RESEND_FROM_NAME: z.string().min(1).default('Mishkat Academy'),
 
   // 👑 Seed Admin
-  SEED_ADMIN_EMAIL: z.string().email().optional(),
-  SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
-  SEED_ADMIN_FIRSTNAME: z.string().min(1).optional().default('Admin'),
-  SEED_ADMIN_LASTNAME: z.string().min(1).optional().default('User'),
-  SEED_ADMIN_VERIFY_EMAIL: z
-    .string()
-    .optional()
-    .default('true')
-    .transform((v) => v === 'true'),
-  SEED_ADMIN_UPDATE_NAME: z
-    .string()
-    .optional()
-    .transform((v) => String(v || '').toLowerCase() === 'true')
-    .default('false' as any),
+  // SEED_ADMIN_EMAIL: z.string().email().optional(),
+  // SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
+  // SEED_ADMIN_FIRSTNAME: z.string().min(1).optional().default('Admin'),
+  // SEED_ADMIN_LASTNAME: z.string().min(1).optional().default('User'),
+  // SEED_ADMIN_VERIFY_EMAIL: z
+  //   .string()
+  //   .optional()
+  //   .default('true')
+  //   .transform((v) => v === 'true'),
+  // SEED_ADMIN_UPDATE_NAME: z
+  //   .string()
+  //   .optional()
+  //   .transform((v) => String(v || '').toLowerCase() === 'true')
+  //   .default('false' as any),
 
-  SEED_ADMIN_RESET_PASSWORD: z
-    .string()
-    .optional()
-    .transform((v) => String(v || '').toLowerCase() === 'true')
-    .default('false' as any),
+  // SEED_ADMIN_RESET_PASSWORD: z
+  //   .string()
+  //   .optional()
+  //   .transform((v) => String(v || '').toLowerCase() === 'true')
+  //   .default('false' as any),
+
+  SEED_ADMIN_ENABLED: booleanFromEnv.default(false),
+
+  SEED_ADMIN_EMAIL: emptyStringToUndefined.pipe(z.string().email().optional()),
+  SEED_ADMIN_PASSWORD: emptyStringToUndefined.pipe(z.string().min(8).optional()),
+
+  SEED_ADMIN_FIRSTNAME: emptyStringToUndefined.pipe(z.string().min(1).optional()).default('Admin'),
+  SEED_ADMIN_LASTNAME: emptyStringToUndefined.pipe(z.string().min(1).optional()).default('User'),
+
+  SEED_ADMIN_VERIFY_EMAIL: booleanFromEnv.default(false),
+  SEED_ADMIN_UPDATE_NAME: booleanFromEnv.default(false),
+  SEED_ADMIN_RESET_PASSWORD: booleanFromEnv.default(false),
 });
 
 const parsed = baseSchema.safeParse(process.env);
@@ -123,6 +159,21 @@ if (!parsed.success) {
 
 // اشتقاق MONGODB_URI الموحد
 const d = parsed.data;
+
+if (d.SEED_ADMIN_ENABLED) {
+  if (!d.SEED_ADMIN_EMAIL || !d.SEED_ADMIN_PASSWORD) {
+    console.error(
+      '❌ SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required when SEED_ADMIN_ENABLED=true',
+    );
+    process.exit(1);
+  }
+}
+
+if (d.NODE_ENV === 'production' && d.SEED_ADMIN_RESET_PASSWORD) {
+  console.error('❌ SEED_ADMIN_RESET_PASSWORD must be false in production');
+  process.exit(1);
+}
+
 const derivedMONGODB = d.MONGODB_URI?.trim();
 
 if (!derivedMONGODB) {

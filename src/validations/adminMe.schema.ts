@@ -1,3 +1,4 @@
+// src/validations/adminMe.schema.ts
 import { z } from 'zod';
 
 /** PATCH /admin/me (name + avatar via multipart) */
@@ -9,5 +10,12 @@ export const adminUpdateMeBodySchema = z.object({
 /** POST /admin/me/change-password */
 export const adminChangePasswordBodySchema = z.object({
   currentPassword: z.string().min(1, 'currentPassword is required'),
-  newPassword: z.string().min(8, 'newPassword must be at least 8 chars').max(200),
+  newPassword: z
+    .string()
+    .min(8, 'newPassword must be at least 8 chars')
+    .max(200)
+    .regex(/[a-z]/, 'newPassword must contain at least one lowercase letter')
+    .regex(/[A-Z]/, 'newPassword must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'newPassword must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'newPassword must contain at least one special character'),
 });

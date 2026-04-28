@@ -1,3 +1,4 @@
+// src/routes/adminRoutes.ts
 import { Router } from 'express';
 import { protect, isAdmin } from '../middlewares/authMiddleware';
 import { validateRequestBody } from '../middlewares/validate';
@@ -21,7 +22,7 @@ router.patch(
   adminUpdateMeCtrl,
 );
 
-router.post(
+router.patch(
   '/me/change-password',
   validateRequestBody(adminChangePasswordBodySchema),
   adminChangePasswordCtrl,
